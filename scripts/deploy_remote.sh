@@ -59,8 +59,15 @@ tar -xzf "${API_ARCHIVE}" -C "${API_DIR}"
 tar -xzf "${UI_ARCHIVE}" -C "${UI_DIR}"
 
 if [[ -n "${API_ENV_FILE}" && -f "${API_ENV_FILE}" ]]; then
-  echo "==> Applying API env file from ${API_ENV_FILE}"
-  cp "${API_ENV_FILE}" "${API_DIR}/.env"
+  target_env="${API_DIR}/.env"
+  source_env="$(readlink -f "${API_ENV_FILE}")"
+  current_target="$(readlink -f "${target_env}" 2>/dev/null || true)"
+  if [[ "${source_env}" == "${current_target}" ]]; then
+    echo "==> Keeping existing API env file"
+  else
+    echo "==> Applying API env file from ${API_ENV_FILE}"
+    cp "${API_ENV_FILE}" "${target_env}"
+  fi
 elif [[ ! -f "${API_DIR}/.env" && -f "${API_DIR}/.env.example" ]]; then
   echo "==> Creating API env file from .env.example"
   cp "${API_DIR}/.env.example" "${API_DIR}/.env"
