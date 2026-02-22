@@ -20,10 +20,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
-      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-      DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
-      DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-      DEPLOY_DOMAIN: ${{ secrets.DEPLOY_DOMAIN }}
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST || vars.DEPLOY_HOST || '5.161.228.109' }}
+      DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || vars.DEPLOY_PORT || '22' }}
+      DEPLOY_USER: ${{ secrets.DEPLOY_USER || vars.DEPLOY_USER || 'root' }}
+      DEPLOY_DOMAIN: ${{ secrets.DEPLOY_DOMAIN || vars.DEPLOY_DOMAIN || 'omninoc.omniforge.com.br' }}
       CERTBOT_EMAIL: ${{ secrets.CERTBOT_EMAIL }}
       API_ENV_B64: ${{ secrets.API_ENV_B64 }}
     steps:
@@ -33,8 +33,8 @@ jobs:
       - name: Validate required secrets
         run: |
           set -euo pipefail
-          test -n "${DEPLOY_HOST}" || (echo "Missing secret DEPLOY_HOST" && exit 1)
-          test -n "${DEPLOY_USER}" || (echo "Missing secret DEPLOY_USER" && exit 1)
+          test -n "${DEPLOY_HOST}" || (echo "Missing DEPLOY_HOST" && exit 1)
+          test -n "${DEPLOY_USER}" || (echo "Missing DEPLOY_USER" && exit 1)
 
       - name: Build deploy archives
         run: |
