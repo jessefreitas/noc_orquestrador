@@ -1,11 +1,11 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ACCESS_TOKEN_KEY, USER_EMAIL_KEY, clearSession } from "@/lib/auth";
 import styles from "./dashboard.module.css";
 
-const menu = ["Colaboradores", "APIs Empresas", "Hetzner"];
+const menu = ["Colaboradores", "APIs Empresas", "Servidores"];
 const roleHints = "admin,operator,viewer";
 const providerOptions = [
   "hetzner",
@@ -87,6 +87,13 @@ type HetznerLog = {
   created_by: number | null;
   created_at: string;
 };
+type Runbook = {
+  name: string;
+  version: string;
+  category: string;
+  enabled: boolean;
+  schema_json: Record<string, unknown>;
+};
 
 type UserDraft = {
   rolesText: string;
@@ -110,11 +117,35 @@ function parseMetadata(input: string): Record<string, unknown> {
   return parsed as Record<string, unknown>;
 }
 
+function metricFromLabels(labels: Record<string, unknown>, keys: string[]): string {
+  for (const key of keys) {
+    const value = labels[key];
+    if (typeof value === "number") return String(value);
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return "n/d";
+}
+
+function toDateSafe(value: string | null): Date | null {
+  if (!value) return null;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function formatDateTime(value: string | null): string {
+  const parsed = toDateSafe(value);
+  if (!parsed) return "-";
+  return parsed.toLocaleString("pt-BR");
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const [isReady, setIsReady] = useState(false);
   const [activeView, setActiveView] = useState<"colaboradores" | "apis" | "hetzner">("colaboradores");
   const [hetznerSection, setHetznerSection] = useState<"cadastro" | "servicos" | "alertas" | "logs">("cadastro");
+  const [serverDetailTab, setServerDetailTab] = useState<"dashboard" | "controles" | "alertas" | "logs">("dashboard");
+  const [serverSearch, setServerSearch] = useState("");
+  const [serverFilter, setServerFilter] = useState<"all" | "healthy" | "alerting" | "maintenance">("all");
   const [userEmail, setUserEmail] = useState("admin@omniforge.com.br");
   const [myRoles, setMyRoles] = useState<string[]>([]);
   const [myAreas, setMyAreas] = useState<string[]>([]);
@@ -151,6 +182,8 @@ export default function DashboardPage() {
   const [secretValue, setSecretValue] = useState("");
   const [metadataText, setMetadataText] = useState("{}");
   const [creatingCredential, setCreatingCredential] = useState(false);
+  const [editingCredentialId, setEditingCredentialId] = useState<number | null>(null);
+  const [deletingCredentialId, setDeletingCredentialId] = useState<number | null>(null);
   const [hetznerServers, setHetznerServers] = useState<HetznerServer[]>([]);
   const [hetznerPolicies, setHetznerPolicies] = useState<HetznerPolicy[]>([]);
   const [hetznerStatus, setHetznerStatus] = useState<HetznerStatus[]>([]);
@@ -177,9 +210,34 @@ export default function DashboardPage() {
   const [policyIntervalMinutes, setPolicyIntervalMinutes] = useState("60");
   const [policyRetentionDays, setPolicyRetentionDays] = useState("7");
   const [policyRetentionCount, setPolicyRetentionCount] = useState("7");
+  const [updatingServerId, setUpdatingServerId] = useState<number | null>(null);
+  const [runbooks, setRunbooks] = useState<Runbook[]>([]);
+  const [selectedRunbookName, setSelectedRunbookName] = useState("");
+  const [executingRunbook, setExecutingRunbook] = useState(false);
 
   const isAdmin = myRoles.includes("admin");
   const hetznerCredentials = credentials.filter((item) => item.provider === "hetzner");
+  const selectedServer = useMemo(
+    () => hetznerServers.find((server) => server.id === selectedHetznerServerId) ?? null,
+    [hetznerServers, selectedHetznerServerId]
+  );
+  const selectedServerStatuses = useMemo(
+    () => (selectedServer ? hetznerStatus.filter((item) => item.server_id === selectedServer.id) : []),
+    [selectedServer, hetznerStatus]
+  );
+  const selectedServerAlerts = useMemo(
+    () => (selectedServer ? hetznerAlerts.filter((item) => item.server_id === selectedServer.id) : []),
+    [selectedServer, hetznerAlerts]
+  );
+  const selectedServerLogs = useMemo(
+    () => (selectedServer ? hetznerLogs.filter((log) => log.server_id === selectedServer.id) : []),
+    [selectedServer, hetznerLogs]
+  );
+  const credentialLabelById = useMemo(() => {
+    const map = new Map<number, string>();
+    for (const row of hetznerCredentials) map.set(row.id, row.label);
+    return map;
+  }, [hetznerCredentials]);
 
   const onLogout = () => {
     clearSession();
@@ -245,6 +303,18 @@ export default function DashboardPage() {
       setApiError("Falha de conexao ao carregar empresas.");
     } finally {
       setLoadingApis(false);
+    }
+  };
+
+  const loadRunbooks = async () => {
+    try {
+      const response = await apiRequest("/v1/runbooks");
+      if (!response.ok) return;
+      const rows = (await response.json()) as Runbook[];
+      setRunbooks(rows);
+      if (!selectedRunbookName && rows.length) setSelectedRunbookName(rows[0].name);
+    } catch {
+      // noop: runbook list is auxiliary to server controls
     }
   };
 
@@ -349,6 +419,7 @@ export default function DashboardPage() {
     if (!isReady || !isAdmin) return;
     void loadCollaborators();
     void loadCompanies();
+    void loadRunbooks();
   }, [isReady, isAdmin]);
 
   useEffect(() => {
@@ -360,6 +431,16 @@ export default function DashboardPage() {
     if (!isReady || !isAdmin || !selectedCompanyId) return;
     void loadHetznerData(selectedCompanyId);
   }, [selectedCompanyId, isReady, isAdmin]);
+
+  useEffect(() => {
+    setEditingCredentialId(null);
+    setProvider("hetzner");
+    setLabel("");
+    setBaseUrl("");
+    setAccountId("");
+    setSecretValue("");
+    setMetadataText("{}");
+  }, [selectedCompanyId]);
 
   useEffect(() => {
     if (!hetznerCredentials.length) {
@@ -374,6 +455,17 @@ export default function DashboardPage() {
     if (!selectedHetznerServerId) return;
     void loadServerPolicies(selectedHetznerServerId);
   }, [selectedHetznerServerId]);
+
+  useEffect(() => {
+    const base = hetznerPolicies.find((row) => row.service_type === "backup") ?? hetznerPolicies[0];
+    if (!base) return;
+    setPolicyEnabled(base.enabled);
+    setPolicyRequireConfirm(base.require_confirmation);
+    setPolicyScheduleMode(base.schedule_mode);
+    setPolicyIntervalMinutes(base.interval_minutes ? String(base.interval_minutes) : "60");
+    setPolicyRetentionDays(base.retention_days ? String(base.retention_days) : "7");
+    setPolicyRetentionCount(base.retention_count ? String(base.retention_count) : "7");
+  }, [hetznerPolicies]);
 
   const onCreateUser = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -475,8 +567,12 @@ export default function DashboardPage() {
       setApiError("Selecione uma empresa.");
       return;
     }
-    if (!label.trim() || !secretValue.trim()) {
-      setApiError("Informe rotulo e segredo.");
+    if (!label.trim()) {
+      setApiError("Informe rotulo.");
+      return;
+    }
+    if (!editingCredentialId && !secretValue.trim()) {
+      setApiError("Informe segredo para nova credencial.");
       return;
     }
     let metadata: Record<string, unknown>;
@@ -488,23 +584,29 @@ export default function DashboardPage() {
     }
     setCreatingCredential(true);
     try {
-      const response = await apiRequest(`/v1/companies/${selectedCompanyId}/api-credentials`, {
-        method: "POST",
-        body: JSON.stringify({
-          provider,
-          label: label.trim(),
-          base_url: baseUrl.trim() || null,
-          account_id: accountId.trim() || null,
-          metadata_json: metadata,
-          secret_value: secretValue.trim()
-        })
-      });
+      const payload: Record<string, unknown> = {
+        provider,
+        label: label.trim(),
+        base_url: baseUrl.trim() || null,
+        account_id: accountId.trim() || null,
+        metadata_json: metadata
+      };
+      if (secretValue.trim()) payload.secret_value = secretValue.trim();
+
+      const response = await apiRequest(
+        editingCredentialId ? `/v1/api-credentials/${editingCredentialId}` : `/v1/companies/${selectedCompanyId}/api-credentials`,
+        {
+          method: editingCredentialId ? "PATCH" : "POST",
+          body: JSON.stringify(payload)
+        }
+      );
       if (!response.ok) {
-        const body = await response.json().catch(() => ({ detail: "Erro ao criar credencial." }));
-        setApiError(body.detail ?? "Erro ao criar credencial.");
+        const body = await response.json().catch(() => ({ detail: "Erro ao salvar credencial." }));
+        setApiError(body.detail ?? "Erro ao salvar credencial.");
         return;
       }
-      setApiMessage("Credencial cadastrada com sucesso.");
+      setApiMessage(editingCredentialId ? "Credencial atualizada com sucesso." : "Credencial cadastrada com sucesso.");
+      setEditingCredentialId(null);
       setLabel("");
       setBaseUrl("");
       setAccountId("");
@@ -512,9 +614,53 @@ export default function DashboardPage() {
       setMetadataText("{}");
       await loadCredentials(selectedCompanyId);
     } catch {
-      setApiError("Falha de conexao ao criar credencial.");
+      setApiError("Falha de conexao ao salvar credencial.");
     } finally {
       setCreatingCredential(false);
+    }
+  };
+
+  const onEditCredential = (credential: ApiCredential) => {
+    setApiError("");
+    setApiMessage("");
+    setEditingCredentialId(credential.id);
+    setProvider(credential.provider);
+    setLabel(credential.label);
+    setBaseUrl(credential.base_url ?? "");
+    setAccountId(credential.account_id ?? "");
+    setMetadataText(JSON.stringify(credential.metadata_json ?? {}, null, 2));
+    setSecretValue("");
+  };
+
+  const onCancelEditCredential = () => {
+    setEditingCredentialId(null);
+    setProvider("hetzner");
+    setLabel("");
+    setBaseUrl("");
+    setAccountId("");
+    setSecretValue("");
+    setMetadataText("{}");
+  };
+
+  const onDeleteCredential = async (credential: ApiCredential) => {
+    if (!window.confirm(`Excluir credencial "${credential.label}"?`)) return;
+    setDeletingCredentialId(credential.id);
+    setApiError("");
+    setApiMessage("");
+    try {
+      const response = await apiRequest(`/v1/api-credentials/${credential.id}`, { method: "DELETE" });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({ detail: "Erro ao excluir credencial." }));
+        setApiError(body.detail ?? "Erro ao excluir credencial.");
+        return;
+      }
+      setApiMessage("Credencial excluida.");
+      if (editingCredentialId === credential.id) onCancelEditCredential();
+      if (selectedCompanyId) await loadCredentials(selectedCompanyId);
+    } catch {
+      setApiError("Falha de conexao ao excluir credencial.");
+    } finally {
+      setDeletingCredentialId(null);
     }
   };
 
@@ -615,6 +761,99 @@ export default function DashboardPage() {
     }
   };
 
+  const onAssignServerCredential = async (server: HetznerServer, credentialIdValue: string) => {
+    const credentialId = credentialIdValue ? Number(credentialIdValue) : null;
+    setHetznerError("");
+    setHetznerMessage("");
+    setUpdatingServerId(server.id);
+    try {
+      const response = await apiRequest(`/v1/hetzner/servers/${server.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ credential_id: credentialId })
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({ detail: "Erro ao atualizar credencial do servidor." }));
+        setHetznerError(body.detail ?? "Erro ao atualizar credencial do servidor.");
+        return;
+      }
+      setHetznerMessage("Credencial do servidor atualizada.");
+      if (selectedCompanyId) await loadHetznerData(selectedCompanyId);
+    } catch {
+      setHetznerError("Falha de conexao ao atualizar credencial do servidor.");
+    } finally {
+      setUpdatingServerId(null);
+    }
+  };
+
+  const onSelectServer = (serverId: number) => {
+    setSelectedHetznerServerId(serverId);
+    setServerDetailTab("dashboard");
+  };
+
+  const onToggleMaintenance = async (server: HetznerServer, enabled: boolean) => {
+    const labels = { ...(server.labels_json ?? {}) };
+    if (enabled) labels.maintenance = true;
+    else delete labels.maintenance;
+    setHetznerError("");
+    setHetznerMessage("");
+    setUpdatingServerId(server.id);
+    try {
+      const response = await apiRequest(`/v1/hetzner/servers/${server.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ labels_json: labels })
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({ detail: "Erro ao atualizar manutencao." }));
+        setHetznerError(body.detail ?? "Erro ao atualizar manutencao.");
+        return;
+      }
+      setHetznerMessage(enabled ? "Modo manutencao ativado." : "Modo manutencao desativado.");
+      if (selectedCompanyId) await loadHetznerData(selectedCompanyId);
+    } catch {
+      setHetznerError("Falha de conexao ao atualizar manutencao.");
+    } finally {
+      setUpdatingServerId(null);
+    }
+  };
+
+  const onExecuteRunbook = async () => {
+    if (!selectedServer) {
+      setHetznerError("Selecione um servidor.");
+      return;
+    }
+    if (!selectedRunbookName) {
+      setHetznerError("Selecione um runbook.");
+      return;
+    }
+    setHetznerError("");
+    setHetznerMessage("");
+    setExecutingRunbook(true);
+    try {
+      const response = await apiRequest(`/v1/runbooks/${encodeURIComponent(selectedRunbookName)}/execute`, {
+        method: "POST",
+        body: JSON.stringify({
+          inputs: {
+            server_id: selectedServer.id,
+            server_name: selectedServer.name,
+            server_external_id: selectedServer.external_id,
+            company_id: selectedServer.company_id
+          }
+        })
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({ detail: "Erro ao executar runbook." }));
+        setHetznerError(body.detail ?? "Erro ao executar runbook.");
+        return;
+      }
+      const job = (await response.json()) as { job_id: number; status: string };
+      setHetznerMessage(`Runbook enviado. Job #${job.job_id} (${job.status}).`);
+    } catch {
+      setHetznerError("Falha de conexao ao executar runbook.");
+    } finally {
+      setExecutingRunbook(false);
+    }
+  };
+
   const onSavePolicy = async (serviceType: "backup" | "snapshot") => {
     if (!selectedHetznerServerId) {
       setHetznerError("Selecione um servidor.");
@@ -672,6 +911,269 @@ export default function DashboardPage() {
     }
   };
 
+  const alertSet = useMemo(() => new Set(["atraso", "falha", "sem_politica"]), []);
+  const statusByServerId = useMemo(() => {
+    const map = new Map<number, HetznerStatus[]>();
+    for (const item of hetznerStatus) {
+      const rows = map.get(item.server_id) ?? [];
+      rows.push(item);
+      map.set(item.server_id, rows);
+    }
+    return map;
+  }, [hetznerStatus]);
+  const filteredServers = useMemo(() => {
+    const query = serverSearch.trim().toLowerCase();
+    return hetznerServers.filter((server) => {
+      const maintenance = Boolean(server.labels_json?.maintenance);
+      const statuses = statusByServerId.get(server.id) ?? [];
+      const hasAlert = statuses.some((row) => alertSet.has(row.status));
+      if (serverFilter === "healthy" && hasAlert) return false;
+      if (serverFilter === "alerting" && !hasAlert) return false;
+      if (serverFilter === "maintenance" && !maintenance) return false;
+      if (!query) return true;
+      return (
+        server.name.toLowerCase().includes(query) ||
+        server.external_id.toLowerCase().includes(query) ||
+        (server.datacenter ?? "").toLowerCase().includes(query) ||
+        (server.ipv4 ?? "").toLowerCase().includes(query)
+      );
+    });
+  }, [alertSet, hetznerServers, serverFilter, serverSearch, statusByServerId]);
+  const serversWithAlerts = useMemo(
+    () => hetznerServers.filter((server) => (statusByServerId.get(server.id) ?? []).some((item) => alertSet.has(item.status))).length,
+    [alertSet, hetznerServers, statusByServerId]
+  );
+  const healthyServers = Math.max(hetznerServers.length - serversWithAlerts, 0);
+  const overallHealthPct = hetznerServers.length ? Math.round((healthyServers / hetznerServers.length) * 100) : 0;
+  const backupEnabledCount = hetznerServers.filter((server) => server.allow_backup).length;
+  const snapshotEnabledCount = hetznerServers.filter((server) => server.allow_snapshot).length;
+  const selectedMaintenance = Boolean(selectedServer?.labels_json?.maintenance);
+  const selectedServerCpu = selectedServer ? metricFromLabels(selectedServer.labels_json, ["cpu", "cpu_pct", "cpu_usage"]) : "n/d";
+  const selectedServerRam = selectedServer ? metricFromLabels(selectedServer.labels_json, ["ram", "ram_pct", "ram_usage"]) : "n/d";
+  const selectedServerDisk = selectedServer ? metricFromLabels(selectedServer.labels_json, ["disk", "disk_pct", "disk_usage"]) : "n/d";
+  const selectedServerPing = selectedServer ? metricFromLabels(selectedServer.labels_json, ["ping", "ping_ms", "latency_ms"]) : "n/d";
+  const selectedServerJobsCount = selectedServerLogs.length;
+  const selectedServerUptime = selectedServerStatuses.length
+    ? `${Math.round((selectedServerStatuses.filter((row) => row.status === "ok").length / selectedServerStatuses.length) * 100)}%`
+    : "n/d";
+  const nowMs = Date.now();
+  const logsIn1h = selectedServerLogs.filter((row) => {
+    const date = toDateSafe(row.created_at);
+    return date ? nowMs - date.getTime() <= 60 * 60 * 1000 : false;
+  }).length;
+  const logsIn24h = selectedServerLogs.filter((row) => {
+    const date = toDateSafe(row.created_at);
+    return date ? nowMs - date.getTime() <= 24 * 60 * 60 * 1000 : false;
+  }).length;
+  const logsIn7d = selectedServerLogs.filter((row) => {
+    const date = toDateSafe(row.created_at);
+    return date ? nowMs - date.getTime() <= 7 * 24 * 60 * 60 * 1000 : false;
+  }).length;
+
+  const serverManagementView = (
+    <section className={styles.panelGrid}>
+      <article className={styles.panel}>
+        <h2 className={styles.panelTitle}>Servidores (lista geral)</h2>
+        <div className={styles.formGrid}>
+          <select className={styles.input} value={selectedCompanyId ?? ""} onChange={(e) => setSelectedCompanyId(Number(e.target.value))}>
+            {companies.length === 0 ? <option value="">Sem empresas</option> : null}
+            {companies.map((company) => (
+              <option key={company.id} value={company.id}>
+                {company.name} ({company.status})
+              </option>
+            ))}
+          </select>
+          <input
+            className={styles.input}
+            placeholder="Buscar servidor, datacenter, IP..."
+            value={serverSearch}
+            onChange={(e) => setServerSearch(e.target.value)}
+          />
+          <select className={styles.input} value={serverFilter} onChange={(e) => setServerFilter(e.target.value as "all" | "healthy" | "alerting" | "maintenance")}>
+            <option value="all">Todos</option>
+            <option value="healthy">Saudaveis</option>
+            <option value="alerting">Com alerta</option>
+            <option value="maintenance">Em manutencao</option>
+          </select>
+          <select className={styles.input} value={selectedHetznerCredentialId ?? ""} onChange={(e) => setSelectedHetznerCredentialId(Number(e.target.value))}>
+            {hetznerCredentials.length === 0 ? <option value="">Sem credencial Hetzner</option> : null}
+            {hetznerCredentials.map((cred) => (
+              <option key={cred.id} value={cred.id}>
+                {cred.label}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            className={styles.submitButton}
+            disabled={!selectedCompanyId || !selectedHetznerCredentialId || importingHetzner}
+            onClick={onImportHetznerServers}
+          >
+            {importingHetzner ? "Importando..." : "Importar da API"}
+          </button>
+        </div>
+
+        <form className={styles.formGrid} style={{ marginTop: 10 }} onSubmit={onCreateHetznerServer}>
+          <input className={styles.input} placeholder="External ID" value={newServerExternalId} onChange={(e) => setNewServerExternalId(e.target.value)} />
+          <input className={styles.input} placeholder="Nome" value={newServerName} onChange={(e) => setNewServerName(e.target.value)} />
+          <input className={styles.input} placeholder="Datacenter" value={newServerDatacenter} onChange={(e) => setNewServerDatacenter(e.target.value)} />
+          <input className={styles.input} placeholder="IPv4" value={newServerIpv4} onChange={(e) => setNewServerIpv4(e.target.value)} />
+          <textarea className={styles.input} placeholder='labels_json ({"env":"prod"})' value={newServerLabels} onChange={(e) => setNewServerLabels(e.target.value)} />
+          <button className={styles.secondaryButton} type="submit" disabled={creatingHetznerServer || !selectedCompanyId}>
+            {creatingHetznerServer ? "Salvando..." : "Cadastrar servidor"}
+          </button>
+        </form>
+
+        <div className={styles.tableWrap} style={{ marginTop: 12 }}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th>Servidor</th>
+                <th>Status</th>
+                <th>Uptime</th>
+                <th>CPU/RAM/Disco</th>
+                <th>Backup/Snapshot</th>
+                <th>Credencial</th>
+                <th>Acoes</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredServers.map((srv) => {
+                const statuses = statusByServerId.get(srv.id) ?? [];
+                const hasAlert = statuses.some((row) => alertSet.has(row.status));
+                const uptime = statuses.length
+                  ? `${Math.round((statuses.filter((row) => row.status === "ok").length / statuses.length) * 100)}%`
+                  : "n/d";
+                const cpu = metricFromLabels(srv.labels_json, ["cpu", "cpu_pct", "cpu_usage"]);
+                const ram = metricFromLabels(srv.labels_json, ["ram", "ram_pct", "ram_usage"]);
+                const disk = metricFromLabels(srv.labels_json, ["disk", "disk_pct", "disk_usage"]);
+                return (
+                  <tr key={srv.id} className={selectedServer?.id === srv.id ? styles.selectedRow : ""}>
+                    <td>
+                      <strong>{srv.name}</strong>
+                      <p className={styles.sub}>{srv.external_id}</p>
+                    </td>
+                    <td>{hasAlert ? <span className={styles.statusErr}>alerta</span> : <span className={styles.statusOk}>ok</span>}</td>
+                    <td>{uptime}</td>
+                    <td>{`${cpu}/${ram}/${disk}`}</td>
+                    <td>{`${srv.allow_backup ? "on" : "off"} / ${srv.allow_snapshot ? "on" : "off"}`}</td>
+                    <td>
+                      <select
+                        className={styles.inlineInput}
+                        value={srv.credential_id ?? ""}
+                        disabled={updatingServerId === srv.id}
+                        onChange={(e) => void onAssignServerCredential(srv, e.target.value)}
+                      >
+                        <option value="">Sem credencial</option>
+                        {hetznerCredentials.map((cred) => (
+                          <option key={cred.id} value={cred.id}>
+                            {cred.label}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td>
+                      <button type="button" className={styles.smallButton} onClick={() => onSelectServer(srv.id)}>
+                        Abrir
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        {hetznerError ? <p className={styles.statusError}>{hetznerError}</p> : null}
+        {hetznerMessage ? <p className={styles.statusOk}>{hetznerMessage}</p> : null}
+      </article>
+
+      <article className={styles.panel}>
+        {!selectedServer ? (
+          <p className={styles.sub}>Selecione um servidor para abrir Dashboard, Controles, Alertas e Logs.</p>
+        ) : (
+          <>
+            <h2 className={styles.panelTitle}>{`${selectedServer.name} (${selectedServer.external_id})`}</h2>
+            <p className={styles.sub}>
+              Datacenter: {selectedServer.datacenter ?? "-"} | IP: {selectedServer.ipv4 ?? "-"} | Credencial:{" "}
+              {selectedServer.credential_id ? credentialLabelById.get(selectedServer.credential_id) ?? `#${selectedServer.credential_id}` : "nao vinculada"}
+            </p>
+            <div className={styles.tabBar}>
+              {(["dashboard", "controles", "alertas", "logs"] as const).map((tab) => (
+                <button
+                  key={tab}
+                  type="button"
+                  className={`${styles.tabButton} ${serverDetailTab === tab ? styles.tabButtonActive : ""}`}
+                  onClick={() => setServerDetailTab(tab)}
+                >
+                  {tab === "dashboard" ? "Dashboard" : tab === "controles" ? "Controles" : tab === "alertas" ? "Alertas" : "Logs"}
+                </button>
+              ))}
+            </div>
+            {serverDetailTab === "dashboard" ? (
+              <div className={styles.kpiGrid}>
+                <article className={styles.kpiCard}><p className={styles.cardLabel}>CPU</p><p className={styles.cardValue}>{selectedServerCpu}</p></article>
+                <article className={styles.kpiCard}><p className={styles.cardLabel}>RAM</p><p className={styles.cardValue}>{selectedServerRam}</p></article>
+                <article className={styles.kpiCard}><p className={styles.cardLabel}>Disco</p><p className={styles.cardValue}>{selectedServerDisk}</p></article>
+                <article className={styles.kpiCard}><p className={styles.cardLabel}>Ping</p><p className={styles.cardValue}>{selectedServerPing}</p></article>
+                <article className={styles.kpiCard}><p className={styles.cardLabel}>Uptime</p><p className={styles.cardValue}>{selectedServerUptime}</p></article>
+                <article className={styles.kpiCard}><p className={styles.cardLabel}>Jobs</p><p className={styles.cardValue}>{selectedServerJobsCount}</p></article>
+                <article className={styles.kpiCard}><p className={styles.cardLabel}>Eventos 1h/24h/7d</p><p className={styles.cardValue}>{`${logsIn1h}/${logsIn24h}/${logsIn7d}`}</p></article>
+                <article className={styles.kpiCard}><p className={styles.cardLabel}>Alertas ativos</p><p className={styles.cardValue}>{selectedServerAlerts.length}</p></article>
+              </div>
+            ) : null}
+            {serverDetailTab === "controles" ? (
+              <div className={styles.formGrid}>
+                <button type="button" className={styles.submitButton} onClick={() => void onRunNow("backup")}>Snapshot/Backup agora</button>
+                <button type="button" className={styles.submitButton} onClick={() => void onRunNow("snapshot")}>Snapshot manual</button>
+                <button type="button" className={styles.secondaryButton} onClick={() => void onToggleMaintenance(selectedServer, !selectedMaintenance)}>
+                  {selectedMaintenance ? "Desativar manutencao" : "Ativar manutencao"}
+                </button>
+                <select className={styles.input} value={selectedRunbookName} onChange={(e) => setSelectedRunbookName(e.target.value)}>
+                  {runbooks.length === 0 ? <option value="">Sem runbooks</option> : null}
+                  {runbooks.map((row) => (
+                    <option key={row.name} value={row.name}>{row.name}</option>
+                  ))}
+                </select>
+                <button type="button" className={styles.smallButton} disabled={!selectedRunbookName || executingRunbook} onClick={onExecuteRunbook}>
+                  {executingRunbook ? "Executando..." : "Rodar runbook"}
+                </button>
+              </div>
+            ) : null}
+            {serverDetailTab === "alertas" ? (
+              <div className={styles.tableWrap}>
+                <table className={styles.table}>
+                  <thead><tr><th>Servico</th><th>Status</th><th>Severidade</th><th>Detalhes</th><th>Ultima execucao</th></tr></thead>
+                  <tbody>
+                    {selectedServerAlerts.length === 0 ? <tr><td colSpan={5}>Sem alertas ativos.</td></tr> : null}
+                    {selectedServerAlerts.map((item, idx) => (
+                      <tr key={`${item.server_id}-${item.service_type}-${idx}`}>
+                        <td>{item.service_type}</td><td>{item.status}</td><td>{item.status === "falha" ? "critico" : "medio"}</td>
+                        <td>{item.details}</td><td>{formatDateTime(item.last_run_at)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : null}
+            {serverDetailTab === "logs" ? (
+              <div className={styles.tableWrap}>
+                <table className={styles.table}>
+                  <thead><tr><th>Quando</th><th>Servico</th><th>Acao</th><th>Status</th><th>Mensagem</th></tr></thead>
+                  <tbody>
+                    {selectedServerLogs.length === 0 ? <tr><td colSpan={5}>Sem logs.</td></tr> : null}
+                    {selectedServerLogs.map((log) => (
+                      <tr key={log.id}><td>{formatDateTime(log.created_at)}</td><td>{log.service_type}</td><td>{log.action}</td><td>{log.status}</td><td>{log.message}</td></tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : null}
+          </>
+        )}
+      </article>
+    </section>
+  );
+
   return (
     <div className={styles.shell}>
       <aside className={styles.sidebar}>
@@ -686,7 +1188,7 @@ export default function DashboardPage() {
               className={`${styles.menuItem} ${
                 (item === "Colaboradores" && activeView === "colaboradores") ||
                 (item === "APIs Empresas" && activeView === "apis") ||
-                (item === "Hetzner" && activeView === "hetzner")
+                (item === "Servidores" && activeView === "hetzner")
                   ? styles.menuItemActive
                   : ""
               }`}
@@ -694,7 +1196,7 @@ export default function DashboardPage() {
               onClick={() => {
                 if (item === "Colaboradores") setActiveView("colaboradores");
                 if (item === "APIs Empresas") setActiveView("apis");
-                if (item === "Hetzner") setActiveView("hetzner");
+                if (item === "Servidores") setActiveView("hetzner");
               }}
             >
               {item}
@@ -721,34 +1223,55 @@ export default function DashboardPage() {
               ? "Colaboradores e Permissoes"
               : activeView === "apis"
                 ? "Cadastro de APIs por Empresa"
-                : "Hetzner por Empresa"}
+                : "Servidores e Monitoramento"}
           </h1>
           <p className={styles.sub}>
             {activeView === "colaboradores"
               ? "Gerencie usuarios, perfis e areas de uso da plataforma."
               : activeView === "apis"
                 ? "Cadastre APIs de Hetzner, Cloudflare, n8n, Portainer, OpenAI, OpenRouter, PostgreSQL e Chatwoot."
-                : "Secoes dedicadas: Cadastro, Servicos, Alertas e Logs."}
+                : "Lista geral por servidor com dashboard, controles, alertas e logs."}
           </p>
 
-          <section className={styles.cards}>
-            <article className={styles.card}>
-              <p className={styles.cardLabel}>Minhas areas</p>
-              <p className={styles.cardValue}>{myAreas.length}</p>
-            </article>
-            <article className={styles.card}>
-              <p className={styles.cardLabel}>Colaboradores</p>
-              <p className={styles.cardValue}>{users.length}</p>
-            </article>
-            <article className={styles.card}>
-              <p className={styles.cardLabel}>Empresas</p>
-              <p className={styles.cardValue}>{companies.length}</p>
-            </article>
-            <article className={styles.card}>
-              <p className={styles.cardLabel}>Credenciais API</p>
-              <p className={styles.cardValue}>{credentials.length}</p>
-            </article>
-          </section>
+          {activeView !== "hetzner" ? (
+            <section className={styles.cards}>
+              <article className={styles.card}>
+                <p className={styles.cardLabel}>Minhas areas</p>
+                <p className={styles.cardValue}>{myAreas.length}</p>
+              </article>
+              <article className={styles.card}>
+                <p className={styles.cardLabel}>Colaboradores</p>
+                <p className={styles.cardValue}>{users.length}</p>
+              </article>
+              <article className={styles.card}>
+                <p className={styles.cardLabel}>Empresas</p>
+                <p className={styles.cardValue}>{companies.length}</p>
+              </article>
+              <article className={styles.card}>
+                <p className={styles.cardLabel}>Credenciais API</p>
+                <p className={styles.cardValue}>{credentials.length}</p>
+              </article>
+            </section>
+          ) : (
+            <section className={styles.cards}>
+              <article className={styles.card}>
+                <p className={styles.cardLabel}>Servidores</p>
+                <p className={styles.cardValue}>{hetznerServers.length}</p>
+              </article>
+              <article className={styles.card}>
+                <p className={styles.cardLabel}>Saude Geral</p>
+                <p className={styles.cardValue}>{overallHealthPct}%</p>
+              </article>
+              <article className={styles.card}>
+                <p className={styles.cardLabel}>Com Alerta</p>
+                <p className={styles.cardValue}>{serversWithAlerts}</p>
+              </article>
+              <article className={styles.card}>
+                <p className={styles.cardLabel}>Backup/Snapshot ON</p>
+                <p className={styles.cardValue}>{`${backupEnabledCount}/${snapshotEnabledCount}`}</p>
+              </article>
+            </section>
+          )}
 
           {!isAdmin ? (
             <article className={styles.panel}>
@@ -898,9 +1421,9 @@ export default function DashboardPage() {
                   ))}
                 </select>
 
-                <h2 className={styles.panelTitle}>Cadastrar credencial API</h2>
+                <h2 className={styles.panelTitle}>{editingCredentialId ? "Editar credencial API" : "Cadastrar credencial API"}</h2>
                 <form className={styles.formGrid} onSubmit={onCreateCredential}>
-                  <select className={styles.input} value={provider} onChange={(e) => setProvider(e.target.value)}>
+                  <select className={styles.input} value={provider} onChange={(e) => setProvider(e.target.value)} disabled={Boolean(editingCredentialId)}>
                     {providerOptions.map((item) => (
                       <option key={item} value={item}>
                         {item}
@@ -922,7 +1445,7 @@ export default function DashboardPage() {
                   />
                   <input
                     className={styles.input}
-                    placeholder="Secret / API Token / Key"
+                    placeholder={editingCredentialId ? "Novo secret (opcional)" : "Secret / API Token / Key"}
                     value={secretValue}
                     onChange={(e) => setSecretValue(e.target.value)}
                   />
@@ -933,8 +1456,13 @@ export default function DashboardPage() {
                     onChange={(e) => setMetadataText(e.target.value)}
                   />
                   <button className={styles.submitButton} type="submit" disabled={creatingCredential || !selectedCompanyId}>
-                    {creatingCredential ? "Salvando..." : "Cadastrar API"}
+                    {creatingCredential ? "Salvando..." : editingCredentialId ? "Salvar alteracoes" : "Cadastrar API"}
                   </button>
+                  {editingCredentialId ? (
+                    <button type="button" className={styles.secondaryButton} onClick={onCancelEditCredential}>
+                      Cancelar edicao
+                    </button>
+                  ) : null}
                 </form>
                 {apiError ? <p className={styles.statusError}>{apiError}</p> : null}
                 {apiMessage ? <p className={styles.statusOk}>{apiMessage}</p> : null}
@@ -953,6 +1481,8 @@ export default function DashboardPage() {
                         <th>Conta</th>
                         <th>Metadata</th>
                         <th>Secret</th>
+                        <th>Uso em servidores</th>
+                        <th>Acoes</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -966,6 +1496,20 @@ export default function DashboardPage() {
                             <pre className={styles.preCell}>{JSON.stringify(row.metadata_json ?? {}, null, 2)}</pre>
                           </td>
                           <td>{row.secret_present ? "configurado" : "nao configurado"}</td>
+                          <td>{hetznerServers.filter((srv) => srv.credential_id === row.id).length}</td>
+                          <td className={styles.actionsCell}>
+                            <button type="button" className={styles.smallButton} onClick={() => onEditCredential(row)}>
+                              Editar
+                            </button>
+                            <button
+                              type="button"
+                              className={styles.smallButtonDanger}
+                              disabled={deletingCredentialId === row.id}
+                              onClick={() => onDeleteCredential(row)}
+                            >
+                              {deletingCredentialId === row.id ? "Excluindo..." : "Excluir"}
+                            </button>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -973,6 +1517,8 @@ export default function DashboardPage() {
                 </div>
               </article>
             </section>
+          ) : activeView === "hetzner" ? (
+            serverManagementView
           ) : (
             <section className={styles.panelGrid}>
               <article className={styles.panel}>

@@ -122,6 +122,7 @@ class HetznerServerCreateRequest(BaseModel):
 
 
 class HetznerServerUpdateRequest(BaseModel):
+    credential_id: int | None = None
     name: str | None = None
     datacenter: str | None = None
     ipv4: str | None = None

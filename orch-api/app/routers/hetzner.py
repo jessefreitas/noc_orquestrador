@@ -304,6 +304,17 @@ def update_hetzner_server(
     if not row:
         raise HTTPException(status_code=404, detail="Server not found")
 
+    if "credential_id" in payload.model_fields_set:
+        if payload.credential_id is None:
+            row.credential_id = None
+        else:
+            credential = db.get(ApiCredential, payload.credential_id)
+            if not credential or credential.company_id != row.company_id:
+                raise HTTPException(status_code=404, detail="Credential not found for server company")
+            if credential.provider != "hetzner":
+                raise HTTPException(status_code=400, detail="Credential provider must be hetzner")
+            row.credential_id = credential.id
+
     if payload.name is not None:
         row.name = payload.name.strip() or row.name
     if payload.datacenter is not None:

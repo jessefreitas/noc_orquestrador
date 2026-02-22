@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.core.secrets import encrypt_secret
 from app.deps import AuthContext, get_db, require_roles
-from app.models import ApiCredential, Company
+from app.models import ApiCredential, Company, HetznerServer
 from app.schemas import (
     ApiCredentialCreateRequest,
     ApiCredentialOut,
@@ -206,3 +206,39 @@ def update_credential(
         metadata_json={"provider": row.provider, "label": row.label},
     )
     return _serialize_credential(row)
+
+
+@router.delete("/api-credentials/{credential_id}")
+def delete_credential(
+    credential_id: int,
+    db: Session = Depends(get_db),
+    ctx: AuthContext = Depends(require_roles("admin")),
+):
+    row = db.get(ApiCredential, credential_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="Credential not found")
+
+    used_by = (
+        db.execute(select(HetznerServer).where(HetznerServer.credential_id == credential_id))
+        .scalars()
+        .first()
+    )
+    if used_by:
+        raise HTTPException(
+            status_code=409,
+            detail="Credential is linked to servers. Reassign or unlink servers before deleting.",
+        )
+
+    provider = row.provider
+    label = row.label
+    db.delete(row)
+    db.commit()
+    write_audit(
+        db,
+        actor_user_id=ctx.user.id,
+        action="api_credential.delete",
+        target_type="api_credential",
+        target_id=str(credential_id),
+        metadata_json={"provider": provider, "label": label},
+    )
+    return {"ok": True}

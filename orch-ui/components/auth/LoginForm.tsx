@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY, USER_EMAIL_KEY } from "@/lib/auth";
 import styles from "./login.module.css";
@@ -43,31 +43,6 @@ export default function LoginForm() {
   const [registerError, setRegisterError] = useState("");
 
   const hero = useMemo(() => HERO_IMAGES[Math.floor(Math.random() * HERO_IMAGES.length)], []);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (document.getElementById("chatwoot-sdk")) return;
-
-    const baseUrl = "https://develop.omniforge.com.br";
-    const script = document.createElement("script");
-    script.id = "chatwoot-sdk";
-    script.src = `${baseUrl}/packs/js/sdk.js`;
-    script.async = true;
-    script.onload = () => {
-      const sdk = (window as typeof window & { chatwootSDK?: { run: (config: object) => void } }).chatwootSDK;
-      if (!sdk) return;
-      (window as typeof window & { chatwootSettings?: Record<string, string> }).chatwootSettings = {
-        position: "right",
-        type: "standard",
-        launcherTitle: "Fale conosco"
-      };
-      sdk.run({
-        websiteToken: "nQE1noMDdduSvoPejkzNpQPn",
-        baseUrl
-      });
-    };
-    document.body.appendChild(script);
-  }, []);
 
   const onSubmitLogin = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
