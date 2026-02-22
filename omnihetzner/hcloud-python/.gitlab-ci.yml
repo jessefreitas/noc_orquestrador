@@ -1,0 +1,41 @@
+include:
+  - project: cloud/integrations/ci
+    file:
+      - default.yml
+      - pre-commit.yml
+      - workflows/feature-branches.yml
+
+stages:
+  - test
+
+pre-commit:
+  extends: [.pre-commit]
+
+lint:
+  stage: test
+
+  image: python:3.14-alpine
+  before_script:
+    - apk add make bash
+    - make venv
+  script:
+    - make lint
+
+test:
+  stage: test
+
+  parallel:
+    matrix:
+      - python_version:
+          - "3.10"
+          - "3.11"
+          - "3.12"
+          - "3.13"
+          - "3.14"
+
+  image: python:${python_version}-alpine
+  before_script:
+    - apk add make
+    - pip install tox
+  script:
+    - tox -e ${python_version}

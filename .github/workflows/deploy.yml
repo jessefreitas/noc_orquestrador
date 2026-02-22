@@ -1,0 +1,115 @@
+name: Deploy NOC
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "orch-api/**"
+      - "orch-ui/**"
+      - "scripts/deploy_remote.sh"
+      - ".github/workflows/deploy.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-noc-production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+      DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+      DEPLOY_DOMAIN: ${{ secrets.DEPLOY_DOMAIN }}
+      CERTBOT_EMAIL: ${{ secrets.CERTBOT_EMAIL }}
+      API_ENV_B64: ${{ secrets.API_ENV_B64 }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate required secrets
+        run: |
+          set -euo pipefail
+          test -n "${DEPLOY_HOST}" || (echo "Missing secret DEPLOY_HOST" && exit 1)
+          test -n "${DEPLOY_USER}" || (echo "Missing secret DEPLOY_USER" && exit 1)
+
+      - name: Build deploy archives
+        run: |
+          set -euo pipefail
+          tar \
+            --exclude='.venv' \
+            --exclude='__pycache__' \
+            --exclude='*.pyc' \
+            --exclude='orch.db' \
+            --exclude='.env' \
+            -czf orch-api-deploy.tar.gz \
+            -C orch-api .
+
+          tar \
+            --exclude='node_modules' \
+            --exclude='.next' \
+            -czf orch-ui-deploy.tar.gz \
+            -C orch-ui .
+
+      - name: Configure SSH
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "${DEPLOY_SSH_KEY}" || (echo "Missing secret DEPLOY_SSH_KEY" && exit 1)
+          export DEPLOY_PORT="${DEPLOY_PORT:-22}"
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "${DEPLOY_SSH_KEY}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H -p "${DEPLOY_PORT}" "${DEPLOY_HOST}" >> ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Write API env file (optional)
+        run: |
+          set -euo pipefail
+          if [ -n "${API_ENV_B64:-}" ]; then
+            printf '%s' "${API_ENV_B64}" | base64 --decode > orch-api.env
+          fi
+
+      - name: Upload artifacts to server
+        run: |
+          set -euo pipefail
+          export DEPLOY_PORT="${DEPLOY_PORT:-22}"
+          scp -i ~/.ssh/deploy_key -P "${DEPLOY_PORT}" \
+            orch-api-deploy.tar.gz \
+            orch-ui-deploy.tar.gz \
+            scripts/deploy_remote.sh \
+            "${DEPLOY_USER}@${DEPLOY_HOST}:/tmp/"
+
+          if [ -f orch-api.env ]; then
+            scp -i ~/.ssh/deploy_key -P "${DEPLOY_PORT}" \
+              orch-api.env \
+              "${DEPLOY_USER}@${DEPLOY_HOST}:/tmp/orch-api.env"
+          fi
+
+      - name: Run remote deploy script
+        run: |
+          set -euo pipefail
+          export DEPLOY_PORT="${DEPLOY_PORT:-22}"
+          REMOTE_ENV="API_ARCHIVE=/tmp/orch-api-deploy.tar.gz UI_ARCHIVE=/tmp/orch-ui-deploy.tar.gz"
+          REMOTE_ENV="${REMOTE_ENV} DEPLOY_DOMAIN=${DEPLOY_DOMAIN:-noc.omniforge.com.br}"
+          REMOTE_ENV="${REMOTE_ENV} CERTBOT_EMAIL=${CERTBOT_EMAIL:-}"
+
+          if [ -f orch-api.env ]; then
+            REMOTE_ENV="${REMOTE_ENV} API_ENV_FILE=/tmp/orch-api.env"
+          fi
+
+          ssh -i ~/.ssh/deploy_key -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
+            "chmod +x /tmp/deploy_remote.sh && ${REMOTE_ENV} /tmp/deploy_remote.sh"
+
+      - name: Cleanup remote temp files
+        if: always()
+        run: |
+          set -euo pipefail
+          export DEPLOY_PORT="${DEPLOY_PORT:-22}"
+          ssh -i ~/.ssh/deploy_key -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
+            "rm -f /tmp/orch-api-deploy.tar.gz /tmp/orch-ui-deploy.tar.gz /tmp/orch-api.env /tmp/deploy_remote.sh"

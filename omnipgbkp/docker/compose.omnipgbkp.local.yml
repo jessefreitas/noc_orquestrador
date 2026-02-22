@@ -1,0 +1,30 @@
+services:
+  omnipgbkp:
+    image: eduardolat/pgbackweb:latest
+    container_name: omnipgbkp
+    restart: unless-stopped
+    env_file:
+      - ../.env.omnipgbkp
+    ports:
+      - "8085:8085"
+    volumes:
+      - ../runtime/backups:/backups
+    depends_on:
+      pgbackweb-db:
+        condition: service_healthy
+
+  pgbackweb-db:
+    image: postgres:16
+    container_name: omnipgbkp-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: pgbackweb
+      POSTGRES_USER: pgbackweb
+      POSTGRES_PASSWORD: change-me
+    volumes:
+      - ../runtime/db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pgbackweb -d pgbackweb"]
+      interval: 5s
+      timeout: 5s
+      retries: 10

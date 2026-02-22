@@ -1,0 +1,45 @@
+name: CI (Lint, Test, Build)
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+jobs:
+  ci:
+    strategy:
+      matrix:
+        vars:
+          [
+            { os: ubuntu-24.04, platform: linux/amd64 },
+            { os: ubuntu-24.04-arm, platform: linux/arm64 },
+          ]
+
+    name: Lint, test, and build the code
+    runs-on: ${{ matrix.vars.os }}
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Docker buildx for multi-architecture builds
+        uses: docker/setup-buildx-action@v3
+        with:
+          use: true
+
+      - name: Build the Docker image
+        run: >
+          docker buildx build
+          --load
+          --platform ${{ matrix.vars.platform }}
+          --tag pgbackweb:latest
+          --file docker/Dockerfile.dev .
+
+      - name: Run lint, test, and build
+        run: docker run --rm -v $PWD:/app pgbackweb:latest /bin/bash -c "cd /app && task ci"

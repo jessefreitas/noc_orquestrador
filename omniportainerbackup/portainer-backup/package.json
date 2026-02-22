@@ -1,0 +1,60 @@
+{
+    "name": "portainer-backup",
+    "version": "0.0.7",
+    "description": "Utility for scripting or scheduling scheduled backups for Portainer",
+    "readme": "README.md",
+    "keywords": [
+        "portainer",
+        "backup",
+        "docker",
+        "kubernetes",
+        "container"
+    ],
+    "homepage": "https://github.com/SavageSoftware/portainer-backup",
+    "bugs": "https://github.com/SavageSoftware/portainer-backup/issues",
+    "author": {
+        "name": "SavageSoftware, LLC.",
+        "url": "https://savagesoftware.com"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/SavageSoftware/portainer-backup.git"
+    },
+    "engines": {
+        "node": ">=16"
+    },
+    "license": "Apache",
+    "main": "index.js",
+    "type": "module",
+    "bin": {
+        "portainer-backup": "src/index.js"
+    },
+    "scripts": {
+        "start": "node src/index.js",
+        "build": "npm install",
+        "help": "node src/index.js help",
+        "schedule": "node src/index.js schedule",
+        "backup": "node src/index.js backup",
+        "stacks": "node src/index.js stacks",
+        "info": "node src/index.js info",
+        "restore": "node src/index.js restore"
+    },
+    "dependencies": {
+        "axios": "^0.27.2",
+        "cli-table3": "^0.6.2",
+        "colors": "^1.4.0",
+        "death": "^1.1.0",
+        "dev-null": "^0.1.1",
+        "figlet": "^1.5.2",
+        "figures": "^5.0.0",
+        "gradient-string": "^2.0.1",
+        "log-symbols": "^5.1.0",
+        "luxon": "^3.0.1",
+        "node-cron": "^3.0.1",
+        "pretty-bytes": "^6.0.0",
+        "sanitize-filename": "^1.6.3",
+        "semver-parser": "^4.0.1",
+        "uuid": "^8.3.2",
+        "yargs": "^17.5.1"
+    }
+}

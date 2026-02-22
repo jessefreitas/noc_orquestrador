@@ -1,0 +1,48 @@
+repos/
+backups/
+
+# Local notes / access docs
+link e acessos
+
+# Runtime and archives
+*.tar
+*.tar.gz
+*.tgz
+*.zip
+*.log
+*.db
+*.sqlite
+*.sqlite3
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+*/.venv/
+*/venv/
+.pytest_cache/
+.mypy_cache/
+
+# Node / frontend
+node_modules/
+.next/
+dist/
+build/
+coverage/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Temporary deploy scripts used for ad-hoc access
+scripts/_tmp_*.ps1
+scripts/recover_*.py

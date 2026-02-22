@@ -1,0 +1,1062 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OmniMeet | Login</title>
+  <style>
+    :root {
+      --bg-primary: #0A1014;
+      --bg-surface: #1D1E24;
+      --border-color: #2C2C2C;
+      --text-primary: #FCFCFC;
+      --text-secondary: #83878A;
+      --accent-green: #22c55e;
+      --accent-green-hover: #16a34a;
+      --danger: #ef4444;
+      --ring: rgba(34, 197, 94, 0.15);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      width: 100%;
+      height: 100dvh;
+      min-height: 100dvh;
+      margin: 0;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: "Inter", "Segoe UI", Roboto, system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      overflow: hidden;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      height: 100dvh;
+      min-height: 100dvh;
+    }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      background: #060b10;
+    }
+
+    .hero img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center center;
+      display: block;
+      filter: brightness(0.92) contrast(1.04);
+    }
+
+    .panel {
+      display: grid;
+      place-items: center;
+      align-content: center;
+      height: 100%;
+      padding: 28px;
+      background:
+        radial-gradient(750px 420px at 100% 0%, rgba(34, 197, 94, 0.08), transparent 55%),
+        radial-gradient(800px 450px at 0% 100%, rgba(131, 135, 138, 0.14), transparent 62%),
+        var(--bg-primary);
+    }
+
+    .card {
+      width: min(460px, 100%);
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      padding: 36px 34px;
+      box-shadow: 0 22px 70px rgba(0, 0, 0, 0.55);
+    }
+
+    .pretitle {
+      color: var(--accent-green);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+
+    .title {
+      margin: 0;
+      text-align: center;
+      font-size: 48px;
+      line-height: 1.05;
+      letter-spacing: -0.02em;
+      font-weight: 700;
+    }
+
+    .subtitle {
+      margin: 12px 0 26px;
+      text-align: center;
+      color: var(--text-secondary);
+      font-size: 15px;
+    }
+
+    .field {
+      margin-bottom: 16px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--text-primary);
+    }
+
+    .field input {
+      width: 100%;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      background: #020c16;
+      color: var(--text-primary);
+      padding: 14px 15px;
+      font-size: 14px;
+      outline: none;
+      transition: border-color .2s ease, box-shadow .2s ease;
+    }
+
+    .field input::placeholder {
+      color: rgba(131, 135, 138, .7);
+    }
+
+    .field input:focus {
+      border-color: var(--accent-green);
+      box-shadow: 0 0 0 3px var(--ring);
+    }
+
+    .password-line {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .forgot {
+      color: var(--accent-green);
+      font-size: 12px;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .forgot:hover { text-decoration: underline; }
+
+    .submit {
+      width: 100%;
+      margin-top: 6px;
+      border: none;
+      border-radius: 13px;
+      padding: 14px 15px;
+      background: var(--accent-green);
+      color: #07140d;
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: transform .2s ease, background .2s ease, box-shadow .2s ease;
+      box-shadow: 0 8px 22px rgba(34, 197, 94, 0.33);
+    }
+
+    .submit:hover {
+      transform: translateY(-1px);
+      background: var(--accent-green-hover);
+    }
+
+    .submit:disabled {
+      opacity: .6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .status {
+      min-height: 20px;
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      text-align: center;
+    }
+
+    .status.success { color: #8df7b8; }
+    .status.info { color: var(--text-secondary); }
+    .status.error { color: var(--danger); }
+
+    .divider {
+      margin: 22px 0;
+      display: flex;
+      align-items: center;
+      color: var(--text-secondary);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .divider::before, .divider::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: var(--border-color);
+    }
+
+    .divider::before { margin-right: 14px; }
+    .divider::after { margin-left: 14px; }
+
+    .footer {
+      text-align: center;
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    .footer a {
+      margin-left: 6px;
+      color: var(--accent-green);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 800;
+      text-decoration: none;
+    }
+
+    .footer a:hover { text-decoration: underline; }
+
+    .register-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(10, 16, 20, 0.95);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 99999;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(4px);
+    }
+
+    .register-modal-overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .register-modal-container {
+      width: min(460px, 92vw);
+      max-height: 90vh;
+      overflow-y: auto;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+    }
+
+    .register-modal-header {
+      padding: 24px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .register-modal-header h2 {
+      margin: 0 0 4px;
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .register-modal-header p {
+      margin: 0;
+      color: var(--text-secondary);
+      font-size: 13px;
+    }
+
+    .register-modal-close {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 28px;
+      cursor: pointer;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      line-height: 1;
+      padding: 0;
+    }
+
+    .register-modal-close:hover {
+      color: var(--text-primary);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .forgot-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-end;
+      align-items: center;
+      margin-top: 8px;
+    }
+
+    .forgot-actions button {
+      position: static;
+      width: auto;
+      height: auto;
+      min-height: 44px;
+      line-height: 1.2;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .forgot-cancel-btn {
+      border: 1px solid var(--border-color);
+      background: transparent;
+      color: var(--text-secondary);
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 13px;
+      font-weight: 700;
+      line-height: 1.2;
+      cursor: pointer;
+    }
+
+    .forgot-cancel-btn:hover {
+      color: var(--text-primary);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .forgot-actions .register-submit-btn {
+      width: auto;
+      margin: 0;
+      flex: 1;
+    }
+
+    .forgot-actions .register-modal-close {
+      border: 1px solid var(--border-color);
+      background: transparent;
+      color: var(--text-secondary);
+    }
+
+    .register-modal-body { padding: 24px; }
+    .register-form-group { margin-bottom: 16px; }
+
+    .register-form-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 7px;
+    }
+
+    .required { color: var(--accent-green); }
+
+    .register-form-input {
+      width: 100%;
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 12px 14px;
+      background: #020c16;
+      color: var(--text-primary);
+      font-size: 14px;
+      outline: none;
+    }
+
+    .register-form-input:focus {
+      border-color: var(--accent-green);
+      box-shadow: 0 0 0 3px var(--ring);
+    }
+
+    .register-form-input.error { border-color: var(--danger); }
+
+    .register-error-message {
+      display: none;
+      color: var(--danger);
+      font-size: 12px;
+      margin-top: 6px;
+    }
+
+    .register-error-message.visible { display: block; }
+
+    .register-info-box {
+      margin: 8px 0 16px;
+      padding: 10px 12px;
+      border: 1px dashed var(--border-color);
+      border-radius: 10px;
+      color: var(--text-secondary);
+      font-size: 12px;
+    }
+
+    .register-checkbox-group {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      color: var(--text-secondary);
+      font-size: 13px;
+      align-items: flex-start;
+    }
+
+    .register-checkbox-group input {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--accent-green);
+      margin-top: 1px;
+    }
+
+    .register-checkbox-group a {
+      color: var(--accent-green);
+      text-decoration: none;
+    }
+
+    .register-checkbox-group a:hover { text-decoration: underline; }
+
+    .register-submit-btn {
+      width: 100%;
+      border: none;
+      border-radius: 10px;
+      padding: 14px;
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      cursor: pointer;
+      background: var(--accent-green);
+      color: #07140d;
+    }
+
+    .register-submit-btn:hover:not(:disabled) {
+      background: var(--accent-green-hover);
+    }
+
+    .register-submit-btn:disabled { opacity: .6; cursor: not-allowed; }
+
+    .register-success-message,
+    .register-error-message-box {
+      display: none;
+      text-align: center;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      padding: 12px;
+      font-size: 13px;
+    }
+
+    .register-success-message {
+      background: rgba(34, 197, 94, 0.1);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      color: var(--accent-green);
+    }
+
+    .register-error-message-box {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: var(--danger);
+    }
+
+    .register-success-message.visible,
+    .register-error-message-box.visible { display: block; }
+
+    .spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid #07140d;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin .6s linear infinite;
+      margin-right: 8px;
+      vertical-align: -2px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 980px) {
+      html, body { height: auto; min-height: 100%; overflow: auto; }
+      .layout { height: auto; min-height: 100vh; }
+      .layout { grid-template-columns: 1fr; }
+      .hero { min-height: 40vh; }
+      .panel { padding: 24px 16px 32px; }
+      .card { width: min(520px, 100%); }
+      .title { font-size: 38px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="layout">
+    <section class="hero">
+      <img id="heroImage" alt="OmniForge" />
+    </section>
+
+    <section class="panel">
+      <div class="card">
+        <div class="pretitle">ACESSE SUA CONTA</div>
+        <h1 class="title">Bem-vindo!</h1>
+        <p class="subtitle">Entre com suas credenciais para continuar</p>
+
+        <form id="loginForm">
+          <div class="field">
+            <label for="email_address">E-mail</label>
+            <input id="email_address" type="text" placeholder="nome@empresa.com.br" autocomplete="username" required />
+          </div>
+
+          <div class="field">
+            <div class="password-line">
+              <label for="password" style="margin:0;">Senha</label>
+              <a id="forgotLink" class="forgot" href="#">Esqueceu a senha?</a>
+            </div>
+            <input id="password" type="password" placeholder="Digite sua senha" autocomplete="current-password" required />
+          </div>
+
+          <button id="submitBtn" class="submit" type="submit">Entrar</button>
+          <div id="loginStatus" class="status"></div>
+        </form>
+
+        <div class="divider">OU</div>
+
+        <div class="footer">
+          N?o tem uma conta?
+          <a href="#" id="openRegister">CRIE SUA CONTA AGORA</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="register-modal-overlay" id="forgotModal">
+    <div class="register-modal-container" style="max-width:460px;">
+      <div class="register-modal-header">
+        <div>
+          <h2>Recuperar senha</h2>
+          <p>Informe o e-mail da conta para gerar uma senha temporaria.</p>
+        </div>
+        <button class="register-modal-close" id="closeForgot">x</button>
+      </div>
+      <div class="register-modal-body">
+        <form id="forgotForm">
+          <div class="register-form-group">
+            <label class="register-form-label" for="forgotEmail">E-mail</label>
+            <input id="forgotEmail" class="register-form-input" type="email" placeholder="nome@empresa.com.br" required />
+          </div>
+          <div id="forgotStatus" class="status" style="margin-top:8px;"></div>
+          <div class="forgot-actions">
+            <button type="button" class="forgot-cancel-btn" id="forgotCancelBtn">Cancelar</button>
+            <button type="submit" class="register-submit-btn" id="forgotSubmitBtn">Gerar senha temporaria</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="register-modal-overlay" id="registerModal">
+    <div class="register-modal-container">
+      <div class="register-modal-header">
+        <div>
+          <h2>Criar Conta</h2>
+          <p>Preencha os dados para criar sua conta</p>
+        </div>
+        <button class="register-modal-close" id="closeRegister">x</button>
+      </div>
+
+      <div class="register-modal-body">
+        <div class="register-success-message" id="registerSuccessMessage">
+          Conta criada com sucesso! Agora fa?a login com seu e-mail e senha.
+        </div>
+        <div class="register-error-message-box" id="registerErrorMessageBox">
+          Erro ao criar conta. Tente novamente.
+        </div>
+
+        <form id="registerForm">
+          <div class="register-form-group">
+            <label class="register-form-label">Nome da Empresa <span class="required">*</span></label>
+            <input id="regCompany" class="register-form-input" type="text" placeholder="Digite o nome da empresa" required />
+            <div class="register-error-message" id="regCompanyError">Digite o nome da empresa</div>
+          </div>
+
+          <div class="register-form-group">
+            <label class="register-form-label">Nome Completo <span class="required">*</span></label>
+            <input id="regFullName" class="register-form-input" type="text" placeholder="Digite seu nome completo" required />
+            <div class="register-error-message" id="regFullNameError">Digite seu nome completo</div>
+          </div>
+
+          <div class="register-form-group">
+            <label class="register-form-label">E-mail <span class="required">*</span></label>
+            <input id="regEmail" class="register-form-input" type="email" placeholder="nome@empresa.com.br" required />
+            <div class="register-error-message" id="regEmailError">Digite um e-mail v?lido</div>
+          </div>
+
+          <div class="register-form-group">
+            <label class="register-form-label">Telefone <span class="required">*</span></label>
+            <input id="regPhone" class="register-form-input" type="tel" placeholder="(00) 00000-0000" required />
+            <div class="register-error-message" id="regPhoneError">Digite um telefone v?lido</div>
+          </div>
+
+          <div class="register-form-group">
+            <label class="register-form-label">Senha <span class="required">*</span></label>
+            <input id="regPassword" class="register-form-input" type="password" placeholder="Minimo de 8 caracteres" required />
+            <div class="register-error-message" id="regPasswordError">Senha precisa ter no m?nimo 8 caracteres</div>
+          </div>
+
+          <div class="register-form-group">
+            <label class="register-form-label">Confirmar Senha <span class="required">*</span></label>
+            <input id="regPasswordConfirm" class="register-form-input" type="password" placeholder="Repita a senha" required />
+            <div class="register-error-message" id="regPasswordConfirmError">As senhas n?o conferem</div>
+          </div>
+
+          <div class="register-info-box">
+            Sua conta ser? criada imediatamente e voc? poder? entrar na hora.
+          </div>
+
+          <div class="register-checkbox-group">
+            <input type="checkbox" id="regTerms" required />
+            <label for="regTerms">
+              Aceito os <a href="https://omniforge.com.br/termos-de-uso/" target="_blank" rel="noopener">termos e condi??es</a>
+            </label>
+          </div>
+
+          <button type="submit" class="register-submit-btn" id="registerSubmitBtn">CRIAR CONTA</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const heroImages = [
+      "https://pub-c86dcb094ea14d3887ecb8d519b16bab.r2.dev/Gemini_Generated_Image_2slteg2slteg2slt.png",
+      "https://pub-c86dcb094ea14d3887ecb8d519b16bab.r2.dev/Gemini_Generated_Image_4s6rv64s6rv64s6r.png",
+      "https://pub-c86dcb094ea14d3887ecb8d519b16bab.r2.dev/Gemini_Generated_Image_bnbd2rbnbd2rbnbd%20(1).png",
+      "https://pub-c86dcb094ea14d3887ecb8d519b16bab.r2.dev/Gemini_Generated_Image_i7turwi7turwi7tu.png",
+      "https://pub-c86dcb094ea14d3887ecb8d519b16bab.r2.dev/Gemini_Generated_Image_jja9snjja9snjja9%20(1).png",
+      "https://pub-c86dcb094ea14d3887ecb8d519b16bab.r2.dev/Gemini_Generated_Image_k8pp09k8pp09k8pp.png",
+      "https://pub-c86dcb094ea14d3887ecb8d519b16bab.r2.dev/Gemini_Generated_Image_pkvs3mpkvs3mpkvs.png"
+    ];
+
+    const WEBHOOK_CREATE_ACCOUNT = "https://webhook.skycracker.com.br/webhook/criar_conta_omnichat";
+
+    const heroImage = document.getElementById("heroImage");
+    const HERO_KEY = 'omnimeet_login_hero_idx';
+    let heroIdx = Number(sessionStorage.getItem(HERO_KEY));
+    if (!Number.isInteger(heroIdx) || heroIdx < 0 || heroIdx >= heroImages.length) {
+      heroIdx = Math.floor(Math.random() * heroImages.length);
+      sessionStorage.setItem(HERO_KEY, String(heroIdx));
+    }
+    heroImage.src = heroImages[heroIdx];
+
+    function resolveExternalScope() {
+      try {
+        const q = new URLSearchParams(window.location.search || '');
+        const fromQuery = String(q.get('external_api_id') || q.get('jitsi_meet_external_api_id') || '').trim();
+        if (fromQuery) return fromQuery;
+      } catch (_error) {}
+      try {
+        const h = new URLSearchParams(String(window.location.hash || '').replace(/^#/, ''));
+        const fromHash = String(h.get('external_api_id') || h.get('jitsi_meet_external_api_id') || '').trim();
+        if (fromHash) return fromHash;
+      } catch (_error) {}
+      return '';
+    }
+
+    function ensureScopeInNext(nextPath, scope) {
+      const safeScope = String(scope || '').trim();
+      if (!safeScope) return nextPath;
+      try {
+        const parsed = new URL(String(nextPath || '/'), window.location.origin);
+        parsed.searchParams.set('external_api_id', safeScope);
+        return `${parsed.pathname}${parsed.search}${parsed.hash || ''}`;
+      } catch (_error) {
+        return `/?external_api_id=${encodeURIComponent(safeScope)}`;
+      }
+    }
+
+    function wasExplicitLogout() {
+      try {
+        const params = new URLSearchParams(window.location.search || '');
+        return String(params.get('logged_out') || '').trim() === '1';
+      } catch (_error) {
+        return false;
+      }
+    }
+
+    async function checkExistingSession() {
+      if (wasExplicitLogout()) return;
+      try {
+        const response = await fetch('/api/auth/me', { credentials: 'same-origin', cache: 'no-store' });
+        if (!response.ok) return;
+        const data = await response.json().catch(() => ({}));
+        const user = data?.user || {};
+        const sessionSource = String(user.sessionSource || '').toLowerCase();
+        const sessionScope = String(user.sessionExternalApiId || '').trim();
+        const nextPath = getNextUrl();
+        if (sessionSource === 'sso') {
+          const scope = resolveExternalScope() || sessionScope;
+          if (!scope) return;
+          const safeNext = ssoCanAutoRedirectTo(nextPath) ? nextPath : '/';
+          window.location.replace(ensureScopeInNext(safeNext, scope));
+          return;
+        }
+        window.location.replace(nextPath);
+      } catch (_error) {}
+    }
+
+    const DEFAULT_ADMIN_NEXT = '/admin/';
+
+    function normalizeNextPath(nextPath) {
+      const candidate = String(nextPath || '').trim() || DEFAULT_ADMIN_NEXT;
+      if (!candidate.startsWith('/')) {
+        return DEFAULT_ADMIN_NEXT;
+      }
+      try {
+        const parsed = new URL(candidate, window.location.origin);
+        const pathname = String(parsed.pathname || '/');
+        if (pathname === '/') {
+          return DEFAULT_ADMIN_NEXT;
+        }
+        if (pathname === '/historico') {
+          return '/admin/pages/reunioes_historico.html';
+        }
+        if (pathname === '/empresas') {
+          return '/admin/pages/admin_empresas.html';
+        }
+        return `${parsed.pathname}${parsed.search}${parsed.hash || ''}`;
+      } catch (_error) {
+        return DEFAULT_ADMIN_NEXT;
+      }
+    }
+
+    function getNextUrl() {
+      const params = new URLSearchParams(window.location.search);
+      const next = params.get('next') || DEFAULT_ADMIN_NEXT;
+      return normalizeNextPath(next);
+    }
+
+    function nextPathname(nextPath) {
+      try {
+        return String(new URL(String(nextPath || '/'), window.location.origin).pathname || '/');
+      } catch (_error) {
+        return '/';
+      }
+    }
+
+    function ssoCanAutoRedirectTo(nextPath) {
+      const pathname = nextPathname(nextPath);
+      return (
+        pathname === '/' ||
+        pathname === '/historico' ||
+        pathname === '/api/join' ||
+        pathname === '/admin/' ||
+        pathname === '/admin' ||
+        pathname.startsWith('/admin/pages/')
+      );
+    }
+
+    const loginForm = document.getElementById('loginForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const loginStatus = document.getElementById('loginStatus');
+    const forgotLink = document.getElementById('forgotLink');
+    const forgotModal = document.getElementById('forgotModal');
+    const forgotForm = document.getElementById('forgotForm');
+    const forgotEmail = document.getElementById('forgotEmail');
+    const forgotStatus = document.getElementById('forgotStatus');
+    const closeForgot = document.getElementById('closeForgot');
+    const forgotCancelBtn = document.getElementById('forgotCancelBtn');
+
+    function setLoginStatus(message, tone) {
+      if (!loginStatus) return;
+      loginStatus.textContent = String(message || '');
+      loginStatus.classList.remove('success', 'info', 'error');
+      if (tone === 'success' || tone === 'info' || tone === 'error') {
+        loginStatus.classList.add(tone);
+      } else {
+        loginStatus.classList.add('info');
+      }
+    }
+
+    function setForgotStatus(message, tone) {
+      if (!forgotStatus) return;
+      forgotStatus.textContent = String(message || '');
+      forgotStatus.classList.remove('success', 'info', 'error');
+      if (tone === 'success' || tone === 'info' || tone === 'error') {
+        forgotStatus.classList.add(tone);
+      } else {
+        forgotStatus.classList.add('info');
+      }
+    }
+
+    function openForgotModal(prefill) {
+      if (forgotEmail) forgotEmail.value = String(prefill || '');
+      setForgotStatus('', 'info');
+      forgotModal?.classList.add('active');
+      setTimeout(() => forgotEmail?.focus(), 30);
+    }
+
+    function closeForgotModal() {
+      forgotModal?.classList.remove('active');
+      setForgotStatus('', 'info');
+    }
+
+    forgotLink?.addEventListener('click', (event) => {
+      event.preventDefault();
+      const emailTyped = String(document.getElementById('email_address')?.value || '').trim();
+      openForgotModal(emailTyped);
+    });
+
+    closeForgot?.addEventListener('click', closeForgotModal);
+    forgotCancelBtn?.addEventListener('click', closeForgotModal);
+    forgotModal?.addEventListener('click', (event) => {
+      if (event.target === forgotModal) closeForgotModal();
+    });
+
+    forgotForm?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const normalized = String(forgotEmail?.value || '').trim();
+      if (!normalized) {
+        setForgotStatus('Informe um e-mail valido.', 'error');
+        return;
+      }
+      setForgotStatus('Processando recuperacao...', 'info');
+      try {
+        const response = await fetch('/api/auth/forgot-password', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: normalized })
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          const code = String(data.error || '');
+          if (code === 'smtp_send_failed') {
+            setForgotStatus('Falha ao enviar e-mail. Verifique SMTP.', 'error');
+          } else if (code === 'smtp_not_configured') {
+            setForgotStatus('SMTP nao configurado para envio de senha.', 'error');
+          } else if (code === 'invalid_email') {
+            setForgotStatus('Informe um e-mail valido.', 'error');
+          } else {
+            setForgotStatus(String(data.error || 'Falha ao recuperar senha.'), 'error');
+          }
+          return;
+        }
+        setLoginStatus('Se o e-mail existir, enviamos uma senha temporaria.', 'success');
+        setForgotStatus('Senha temporaria enviada por e-mail.', 'success');
+        closeForgotModal();
+      } catch (_error) {
+        setForgotStatus('Erro ao recuperar senha. Tente novamente.', 'error');
+      }
+    });
+
+    loginForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      setLoginStatus('', 'info');
+
+      const username = document.getElementById('email_address').value.trim();
+      const password = document.getElementById('password').value;
+
+      if (!username || !password) {
+        setLoginStatus('Informe usuário e senha.', 'error');
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Entrando...';
+
+      try {
+        const response = await fetch('/api/login', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+
+        if (!response.ok) {
+          setLoginStatus('Credenciais inválidas. Tente novamente.', 'error');
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Entrar';
+          return;
+        }
+
+        sessionStorage.removeItem(HERO_KEY);
+        window.location.href = getNextUrl();
+      } catch (_error) {
+        setLoginStatus('Erro ao autenticar. Tente novamente.', 'error');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Entrar';
+      }
+    });
+
+    const registerModal = document.getElementById('registerModal');
+    const openRegister = document.getElementById('openRegister');
+    const closeRegister = document.getElementById('closeRegister');
+
+    function clearRegisterErrors() {
+      document.querySelectorAll('.register-form-input').forEach((input) => input.classList.remove('error'));
+      document.querySelectorAll('.register-error-message').forEach((msg) => msg.classList.remove('visible'));
+      document.getElementById('registerSuccessMessage').classList.remove('visible');
+      document.getElementById('registerErrorMessageBox').classList.remove('visible');
+    }
+
+    function openRegisterModal() {
+      registerModal.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeRegisterModal() {
+      registerModal.classList.remove('active');
+      document.body.style.overflow = '';
+      document.getElementById('registerForm').reset();
+      clearRegisterErrors();
+      const btn = document.getElementById('registerSubmitBtn');
+      btn.disabled = false;
+      btn.textContent = 'CRIAR CONTA';
+    }
+
+    openRegister.addEventListener('click', (event) => {
+      event.preventDefault();
+      openRegisterModal();
+    });
+
+    closeRegister.addEventListener('click', closeRegisterModal);
+
+    registerModal.addEventListener('click', (event) => {
+      if (event.target === registerModal) {
+        closeRegisterModal();
+      }
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && registerModal.classList.contains('active')) {
+        closeRegisterModal();
+      }
+    });
+
+    document.getElementById('regPhone').addEventListener('input', (event) => {
+      let value = event.target.value.replace(/\D/g, '');
+      if (value.length <= 11) {
+        value = value.replace(/^(\d{2})(\d)/g, '($1) $2');
+        value = value.replace(/(\d)(\d{4})$/, '$1-$2');
+      }
+      event.target.value = value;
+    });
+
+    let isSubmittingRegister = false;
+    document.getElementById('registerForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (isSubmittingRegister) {
+        return;
+      }
+
+      clearRegisterErrors();
+
+      const empresa = document.getElementById('regCompany').value.trim();
+      const nome = document.getElementById('regFullName').value.trim();
+      const email = document.getElementById('regEmail').value.trim();
+      const telefone = document.getElementById('regPhone').value.trim();
+      const senha = document.getElementById('regPassword').value;
+      const senhaConfirmacao = document.getElementById('regPasswordConfirm').value;
+      const termos = document.getElementById('regTerms').checked;
+
+      let hasError = false;
+
+      if (!empresa || empresa.length < 2) {
+        document.getElementById('regCompany').classList.add('error');
+        document.getElementById('regCompanyError').classList.add('visible');
+        hasError = true;
+      }
+
+      if (!nome || nome.length < 3) {
+        document.getElementById('regFullName').classList.add('error');
+        document.getElementById('regFullNameError').classList.add('visible');
+        hasError = true;
+      }
+
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        document.getElementById('regEmail').classList.add('error');
+        document.getElementById('regEmailError').classList.add('visible');
+        hasError = true;
+      }
+
+      if (telefone.replace(/\D/g, '').length < 10) {
+        document.getElementById('regPhone').classList.add('error');
+        document.getElementById('regPhoneError').classList.add('visible');
+        hasError = true;
+      }
+
+      if (!senha || senha.length < 8) {
+        document.getElementById('regPassword').classList.add('error');
+        document.getElementById('regPasswordError').classList.add('visible');
+        hasError = true;
+      }
+
+      if (senhaConfirmacao !== senha) {
+        document.getElementById('regPasswordConfirm').classList.add('error');
+        document.getElementById('regPasswordConfirmError').classList.add('visible');
+        hasError = true;
+      }
+
+      if (!termos) {
+        const box = document.getElementById('registerErrorMessageBox');
+        box.textContent = 'Aceite os termos para continuar';
+        box.classList.add('visible');
+        hasError = true;
+      }
+
+      if (hasError) {
+        return;
+      }
+
+      const submit = document.getElementById('registerSubmitBtn');
+      isSubmittingRegister = true;
+      submit.disabled = true;
+      submit.innerHTML = '<span class="spinner"></span>Criando conta...';
+
+      try {
+        const response = await fetch('/api/register', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            company: empresa,
+            fullName: nome,
+            email,
+            phone: telefone,
+            password: senha
+          })
+        });
+
+        if (response.status === 409) {
+          const box = document.getElementById('registerErrorMessageBox');
+          box.textContent = 'Este e-mail j? est? cadastrado.';
+          box.classList.add('visible');
+          submit.disabled = false;
+          submit.textContent = 'CRIAR CONTA';
+          isSubmittingRegister = false;
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error('register_failed');
+        }
+
+        document.getElementById('registerSuccessMessage').classList.add('visible');
+        submit.textContent = 'Conta criada!';
+        document.getElementById('email_address').value = email;
+        document.getElementById('password').value = senha;
+
+        fetch(WEBHOOK_CREATE_ACCOUNT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ empresa, nome, email, telefone })
+        }).catch(() => {});
+
+        setTimeout(() => closeRegisterModal(), 1800);
+      } catch (_error) {
+        const box = document.getElementById('registerErrorMessageBox');
+        box.textContent = 'Erro ao criar conta. Tente novamente.';
+        box.classList.add('visible');
+        submit.disabled = false;
+        submit.textContent = 'CRIAR CONTA';
+        isSubmittingRegister = false;
+      }
+    });
+
+   

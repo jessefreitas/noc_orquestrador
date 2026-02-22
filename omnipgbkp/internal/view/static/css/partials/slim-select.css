@@ -1,0 +1,61 @@
+/*
+  For Slim Select, this takes some styles from:
+  https://github.com/saadeghi/daisyui/blob/master/src/components/styled/input.css
+*/
+
+.ss-main {
+  all: unset;
+  @apply input input-bordered text-base-content !important;
+}
+
+.ss-content {
+  all: unset;
+  @apply bg-base-100 text-base-content rounded-btn !important;
+  @apply px-2 py-2 space-y-1 !important;
+  @apply border border-base-content/20 !important;
+}
+
+.ss-list {
+  all: unset;
+  @apply space-y-1 !important;
+}
+
+.ss-search input {
+  all: unset;
+  @apply input input-bordered input-sm !important;
+}
+
+.ss-option {
+  all: unset;
+  @apply bg-base-100 text-base-content rounded-btn !important;
+}
+
+.ss-option:hover {
+  all: unset;
+  @apply bg-base-200 !important;
+}
+
+.ss-option.ss-selected {
+  all: unset;
+  @apply bg-base-200 !important;
+}
+
+.ss-option.ss-disabled {
+  @apply text-opacity-80 !important;
+}
+
+.ss-value {
+  @apply bg-primary rounded-badge !important;
+}
+
+.ss-value-text {
+  @apply text-primary-content !important;
+}
+
+.ss-value-delete {
+  @apply border-0 border-l border-primary-content !important;
+}
+
+.ss-value-delete svg path {
+  @apply stroke-primary-content !important;
+}

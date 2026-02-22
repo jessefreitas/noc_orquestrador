@@ -1,0 +1,531 @@
+## 1. Objetivo
+
+Entregar um **blueprint técnico módulo-por-módulo** (pronto para você colar no Codex) para construir o **Orquestrador DevOps** com:
+
+* **UI sobria** (login com imagem à esquerda, form à direita)
+* **API Control Plane** (Auth/RBAC, Connections/Secrets, Jobs, Audit)
+* **Runner Ansible assíncrono** (fila + worker + ansible-runner)
+* **Monitor Portainer/Docker** (inventário, eventos, logs, erros)
+* **IA DevOps** (RAG em cima de logs/incidentes/runbooks, com execução assistida e auditável)
+* **Infra em Docker Swarm + Traefik + SSL automático**
+
+---
+
+## 2. Passo a passo direto
+
+### Passo 0 — Definições fixas (padrão empresa)
+
+* Ambientes: `prod`, `stage`
+* Swarm: **deploy via manager**
+* Traefik: `websecure + letsencrypt`
+* Execução: **tudo vira Job** (nunca síncrono em request)
+* Segredos: **Swarm secrets / Vault** (nada em env plain)
+
+### Passo 1 — Repositórios (separação limpa)
+
+Crie 3 repositórios:
+
+1. `orch-ui` (Next.js)
+2. `orch-api` (API + Worker)
+3. `orch-runbooks` (Ansible roles/playbooks + manifests `orch.yaml` por projeto)
+
+### Passo 2 — Contratos (o que conecta tudo)
+
+* UI chama API: `Auth`, `Runbooks`, `Jobs`, `Logs`, `Connections`, `Portainer`, `AI`
+* API publica jobs na fila
+* Worker consome jobs e chama Runner
+* Runner executa playbooks e produz artifacts + logs
+* Observabilidade coleta logs/eventos para IA
+
+### Passo 3 — Implementação por “fases entregáveis”
+
+1. Auth/RBAC + Jobs + Runner (mínimo operacional)
+2. Runbooks: Cloudflare DNS + Swarm deploy + Portainer inventory/logs
+3. Observability (Loki/Grafana + ingest de eventos)
+4. IA DevOps (diagnóstico read-only → depois plano aprovado)
+
+---
+
+## 3. Código/configuração pronta
+
+A seguir está o blueprint por módulo, com **estrutura de pastas, contratos e critérios de pronto**.
+
+---
+
+# A) MÓDULO FRONT-END (orch-ui)
+
+## A1) Stack e padrões
+
+* Next.js (App Router) + TypeScript
+* Tailwind + shadcn/ui (ou Radix)
+* Auth via JWT + Refresh
+* Streaming logs via WebSocket ou SSE
+
+## A2) Rotas
+
+* `/login`
+* `/dashboard`
+* `/runbooks`
+* `/jobs`
+* `/jobs/[id]`
+* `/containers`
+* `/logs`
+* `/ai`
+* `/settings`
+
+## A3) Layout UI/UX (sóbrio)
+
+### Login (obrigatório)
+
+* Layout 2 colunas:
+
+  * **Esquerda (60%)**: imagem/hero (foto), overlay discreto + branding
+  * **Direita (40%)**: card login (logo, email, senha, remember, entrar, “esqueci senha”)
+* Dark theme padrão
+* Tipografia limpa, sem efeitos chamativos
+* Estados: loading, erro, bloqueio por rate-limit
+
+## A4) Estrutura de pastas
+
+```txt
+orch-ui/
+├─ app/
+│  ├─ login/page.tsx
+│  ├─ dashboard/page.tsx
+│  ├─ runbooks/page.tsx
+│  ├─ jobs/page.tsx
+│  ├─ jobs/[id]/page.tsx
+│  ├─ containers/page.tsx
+│  ├─ ai/page.tsx
+│  └─ settings/page.tsx
+├─ components/
+│  ├─ layout/Sidebar.tsx
+│  ├─ layout/Topbar.tsx
+│  ├─ auth/LoginForm.tsx
+│  ├─ jobs/JobTable.tsx
+│  ├─ jobs/JobTimeline.tsx
+│  ├─ logs/LogStream.tsx
+│  └─ runbooks/RunbookExecuteModal.tsx
+├─ lib/
+│  ├─ api.ts (fetch wrapper)
+│  ├─ auth.ts (token handling)
+│  └─ ws.ts (logs streaming)
+└─ styles/
+```
+
+## A5) Contratos que o front consome (mínimo)
+
+* `POST /v1/auth/login`
+* `POST /v1/auth/refresh`
+* `GET /v1/me`
+* `GET /v1/runbooks`
+* `POST /v1/runbooks/{name}/execute`
+* `GET /v1/jobs`
+* `GET /v1/jobs/{id}`
+* `GET /v1/jobs/{id}/logs/stream` (SSE) ou `WS /v1/ws/jobs/{id}`
+* `GET /v1/portainer/endpoints`
+* `GET /v1/portainer/containers?endpointId=...`
+* `GET /v1/portainer/containers/{id}/logs`
+
+## A6) Definition of Done (Front)
+
+* Login pronto com layout exigido
+* Dashboard com widgets: Jobs rodando / falhas / containers em erro
+* Tela Jobs com status + detalhes + logs streaming
+* Tela Runbooks com formulário dinâmico (schema vindo da API)
+* Sidebar/Topbar padrão + ambiente selecionável
+
+---
+
+# B) MÓDULO BACK-END API (orch-api)
+
+## B1) Stack recomendada
+
+* NestJS (ou FastAPI)
+* Postgres (persistência)
+* Redis (fila)
+* WebSocket/SSE (logs)
+* RBAC + Audit
+
+## B2) Domínios (bounded contexts)
+
+1. Auth
+2. Users/Roles
+3. Connections (credenciais)
+4. Runbooks Catalog
+5. Jobs
+6. Portainer
+7. GitHub ingest
+8. AI (diagnóstico e plano)
+
+## B3) Modelagem de dados (Postgres)
+
+### Tabelas mínimas
+
+* `users(id, email, password_hash, status, created_at)`
+* `roles(id, name)` e `user_roles(user_id, role_id)`
+* `connections(id, type, name, environment, encrypted_payload, created_by, created_at)`
+* `runbooks(id, name, version, schema_json, category, enabled)`
+* `jobs(id, runbook_name, status, input_json, output_json, created_by, started_at, finished_at)`
+* `job_steps(id, job_id, name, status, started_at, finished_at)`
+* `job_logs(id, job_id, ts, level, message)` (ou só append em object storage)
+* `audit_log(id, actor_user_id, action, target_type, target_id, ts, metadata_json)`
+
+### Status padrão
+
+* Job: `PENDING | RUNNING | SUCCESS | ERROR | CANCELED`
+* Step idem
+
+## B4) Criptografia de connections
+
+* `encrypted_payload` com AES-GCM
+* chave em **Swarm secret** (ou Vault)
+* nunca retornar segredo ao front; só “masked fields”
+
+## B5) Endpoints (contrato mínimo)
+
+### Auth
+
+* `POST /v1/auth/login {email, password} -> {accessToken, refreshToken}`
+* `POST /v1/auth/refresh {refreshToken} -> {accessToken}`
+* `GET /v1/me`
+
+### Runbooks
+
+* `GET /v1/runbooks -> [{name, category, schema}]`
+* `POST /v1/runbooks/:name/execute {inputs} -> {jobId}`
+
+### Jobs
+
+* `GET /v1/jobs?status=&runbook=&page=`
+* `GET /v1/jobs/:id`
+* `GET /v1/jobs/:id/logs/stream` (SSE) **ou** `WS /v1/ws/jobs/:id`
+
+### Connections
+
+* `POST /v1/connections`
+* `GET /v1/connections`
+* `PATCH /v1/connections/:id`
+* `DELETE /v1/connections/:id`
+
+### Portainer
+
+* `GET /v1/portainer/endpoints`
+* `GET /v1/portainer/containers?endpointId=`
+* `GET /v1/portainer/containers/:id/logs?endpointId=`
+
+### AI
+
+* `POST /v1/ai/diagnose {jobId | containerId | query} -> {findings, probable_causes, suggested_actions}`
+* `POST /v1/ai/plan {context} -> {plan_json}`
+* `POST /v1/ai/plan/:id/approve -> cria Job(s)` (execução assistida)
+
+## B6) Definition of Done (API)
+
+* RBAC funcional (admin/operator/viewer)
+* Conexões criptografadas
+* Jobs assíncronos com fila
+* Logs em streaming
+* Auditoria em ações críticas
+
+---
+
+# C) MÓDULO WORKER + RUNNER (Execução Ansible)
+
+## C1) Regra de ouro
+
+**Request HTTP nunca executa playbook diretamente.**
+Ele cria Job e o Worker executa.
+
+## C2) Worker (consome Redis)
+
+Responsável por:
+
+* carregar Job
+* montar `private_data_dir` (inventário temporário + vars)
+* chamar runner
+* capturar stdout/stderr por evento
+* atualizar status/steps
+* salvar artifacts (tar/json)
+
+## C3) Runner (ansible-runner)
+
+* container separado
+* sem acesso a segredos exceto os necessários
+* permissões mínimas
+
+## C4) Estrutura `orch-runbooks`
+
+```txt
+orch-runbooks/
+├─ inventory/
+│  ├─ production.ini
+│  └─ group_vars/
+├─ playbooks/
+│  ├─ swarm_deploy.yml
+│  ├─ cloudflare_dns_bulk.yml
+│  ├─ portainer_inventory.yml
+│  ├─ portainer_logs.yml
+│  └─ vps_provision.yml
+├─ roles/
+│  ├─ swarm_stack_deploy/
+│  ├─ cloudflare_dns/
+│  ├─ portainer_api/
+│  ├─ docker_events/
+│  └─ vps_provider/
+└─ manifests/
+   └─ <project>/orch.yaml
+```
+
+## C5) Schema de runbook (para o front renderizar form)
+
+Cada runbook tem `schema_json` (JSON Schema):
+
+* campos
+* required
+* validações
+* defaults
+
+Exemplo mínimo (conceito):
+
+* `cloudflare_dns_bulk`: `zone_id`, `records[]`
+
+## C6) Artifacts padrão por Job
+
+Gravar em:
+
+* `/artifacts/<jobId>/output.json`
+* `/artifacts/<jobId>/logs.ndjson`
+* `/artifacts/<jobId>/artifacts.tar.gz`
+
+---
+
+# D) MÓDULO PORTAINER + DOCKER MONITORING
+
+## D1) Coleta
+
+* Portainer API: inventário + logs por container
+* Docker events (manager): `die`, `oom`, `health_status`, `restart`
+
+## D2) Pipeline de erro/incident
+
+1. Evento detectado (container morreu / healthcheck falhou)
+2. Capturar:
+
+   * últimas N linhas de log
+   * spec do serviço/stack (labels/env)
+   * últimas execuções (jobs) relacionadas
+3. Criar `incident` (pode ser tabela futura) e indexar no motor de busca/IA
+
+---
+
+# E) MÓDULO IA DEVOPS (RAG + Guardrails)
+
+## E1) Modo 1 (obrigatório): Diagnóstico read-only
+
+Entrada:
+
+* logs/eventos
+* specs do container/stack
+* histórico de jobs e mudanças
+  Saída:
+* hipóteses (top 3)
+* comandos sugeridos
+* runbooks sugeridos
+
+## E2) Modo 2: Plano aprovado (assistido)
+
+A IA gera:
+
+```json
+{
+  "steps": [
+    {"runbook":"portainer_logs","inputs":{...}},
+    {"runbook":"swarm_deploy","inputs":{...}}
+  ],
+  "risk":"medium",
+  "rollback":"..."
+}
+```
+
+A execução só ocorre com **approve** (RBAC + audit).
+
+---
+
+# F) MÓDULO “GITHUB PROJECT INGEST + INSTALL”
+
+## F1) Padrão obrigatório por projeto: `orch.yaml`
+
+* inputs necessários
+* dependências
+* steps (runbooks)
+* outputs esperados
+
+## F2) Fluxo “instalar por comando”
+
+1. usuário escolhe repo/tag
+2. API clona e lê `orch.yaml`
+3. UI monta form a partir de inputs
+4. executar pipeline steps como Job encadeado
+5. relatório final + artifacts
+
+---
+
+# G) DEVOPS (Swarm + Traefik + Observability)
+
+## G1) Stack Swarm (orquestrador) — base (ajustável)
+
+Use a stack que você já aprovou como base (API/UI/Worker/Runner/DB/Redis) e adicione observabilidade.
+
+## G2) Observability (Loki + Promtail + Grafana) — stack pronta
+
+`stacks/observability/stack.yml`
+
+```yaml
+version: "3.8"
+
+networks:
+  traefik_public:
+    external: true
+  obs_net:
+    driver: overlay
+    attachable: true
+
+volumes:
+  grafana_data:
+  loki_data:
+
+services:
+  loki:
+    image: grafana/loki:3.0.0
+    networks: [obs_net]
+    command: ["-config.file=/etc/loki/local-config.yaml"]
+    volumes:
+      - loki_data:/loki
+    deploy:
+      replicas: 1
+      placement:
+        constraints: [node.role == manager]
+
+  promtail:
+    image: grafana/promtail:3.0.0
+    networks: [obs_net]
+    volumes:
+      - /var/log:/var/log:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    command: ["-config.file=/etc/promtail/config.yml"]
+    deploy:
+      mode: global
+
+  grafana:
+    image: grafana/grafana:11.0.0
+    networks: [traefik_public, obs_net]
+    volumes:
+      - grafana_data:/var/lib/grafana
+    deploy:
+      replicas: 1
+      placement:
+        constraints: [node.role == manager]
+      labels:
+        - traefik.enable=true
+        - traefik.docker.network=traefik_public
+        - traefik.http.routers.grafana.rule=Host(`grafana.seudominio.com`)
+        - traefik.http.routers.grafana.entrypoints=websecure
+        - traefik.http.routers.grafana.tls=true
+        - traefik.http.routers.grafana.tls.certresolver=letsencrypt
+        - traefik.http.services.grafana.loadbalancer.server.port=3000
+```
+
+## G3) CI/CD (GitHub Actions)
+
+Pipelines por repo:
+
+* lint/test
+* build docker image
+* push GHCR
+* deploy via SSH no manager: `docker stack deploy`
+
+---
+
+# H) PROMPTS PRONTOS PARA O CODEX (copiar e colar)
+
+## H1) Prompt Front (login + layout)
+
+```text
+Implemente no repo orch-ui (Next.js App Router + TS + Tailwind + shadcn):
+1) /login com layout 2 colunas: esquerda imagem (60%), direita card (40%) com email/senha/remember.
+2) Dark theme sóbrio. Componentes: LoginForm, AuthLayout.
+3) Integração com POST /v1/auth/login. Salvar accessToken+refreshToken com refresh automático.
+4) Redirecionar para /dashboard após login.
+Entregar código pronto, responsivo e com estados de erro/loading.
+```
+
+## H2) Prompt API (Auth + Jobs + SSE)
+
+```text
+Implemente no repo orch-api:
+1) Auth JWT + refresh + RBAC (admin/operator/viewer).
+2) Postgres schema (users, roles, connections, runbooks, jobs, job_steps, audit_log).
+3) Endpoint POST /v1/runbooks/:name/execute cria job PENDING e publica no Redis.
+4) SSE em GET /v1/jobs/:id/logs/stream para streaming de logs.
+5) Auditoria: logar ações em audit_log.
+Código pronto com validação input e rate limit no login.
+```
+
+## H3) Prompt Worker/Runner (ansible-runner)
+
+```text
+Implemente orch-worker:
+1) Consumir fila Redis (BullMQ ou equivalente).
+2) Para cada job, montar private_data_dir com inventory/vars, chamar ansible-runner.
+3) Capturar eventos stdout/stderr e persistir job_logs (e também enviar via pub/sub para SSE).
+4) Salvar artifacts em /artifacts/<jobId>/.
+5) Atualizar status RUNNING/SUCCESS/ERROR + job_steps.
+```
+
+---
+
+## 4. Erros comuns
+
+* Fazer “execute playbook” síncrono em request (vai travar e perder logs)
+* Guardar tokens em banco sem criptografia/segredo externo
+* Não ter RBAC + audit (vira risco operacional)
+* IA com permissão de executar sem aprovação (alto risco)
+* Ingest de GitHub sem manifesto (`orch.yaml`) e sem limites de escopo
+
+---
+
+## 5. Melhor prática profissional
+
+### 5.1 Agentes e ferramentas para codar no GitHub (o que vale usar com Codex)
+
+* **GitHub Copilot Agent Mode / Coding agent**: modo agente no editor e também “coding agent” que trabalha como teammate (fluxo de PR/issue), útil para acelerar tarefas grandes e iterações. ([GitHub][1])
+* **Continue.dev**: agentes/checagens em PR (status checks) e automação de review, bom para padronizar qualidade e evitar regressão. ([GitHub][2])
+* **Sourcegraph Cody**: forte para codebase grande e contexto remoto (busca/cross-repo), útil para orientar agentes com contexto correto. ([Sourcegraph][3])
+* **Integração de agentes no GitHub (Claude/Codex etc.)**: tem movimentação recente do GitHub em integrar múltiplos agentes diretamente na plataforma (preview/tiers variam). ([The Verge][4])
+
+**Como usar na prática com seu Codex:**
+
+* Copilot/Cody/Continue para **contexto + revisão**
+* Codex para **implementação dirigida** (por módulo, contrato e DoD)
+
+### 5.2 Regra operacional
+
+Tudo que a IA sugerir vira:
+
+* **Plano** → **Aprovação** → **Job auditável**
+  Nunca “auto-fix” direto em produção.
+
+---
+
+Se você quiser, na próxima mensagem eu já te devolvo **um “Pacote Codex”** (texto único) com:
+
+* backlog em épicos/features
+* tarefas numeradas por equipe (Front/Back/DevOps/IA)
+* critérios de aceite por tarefa
+* e a ordem exata de implementação (para não ter retrabalho).
+
+[1]: https://github.com/newsroom/press-releases/agent-mode?utm_source=chatgpt.com "GitHub Copilot Introduces Agent Mode and Next Edit Suggestions to Boost ..."
+[2]: https://github.com/continuedev/continue?utm_source=chatgpt.com "GitHub - continuedev/continue: ⏩ Source-controlled AI checks ..."
+[3]: https://sourcegraph.com/docs/cody?utm_source=chatgpt.com "Cody - Sourcegraph docs"
+[4]: https://www.theverge.com/news/873665/github-claude-codex-ai-agents?utm_source=chatgpt.com "GitHub adds Claude and Codex AI coding agents"

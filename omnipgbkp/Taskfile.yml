@@ -1,0 +1,158 @@
+version: "3"
+
+dotenv: [".env"]
+
+tasks:
+  ci:
+    desc: Run the CI tasks
+    cmds:
+      - task: deps
+      - task: fixperms
+      - task: checkdeps
+      - task: lint
+      - task: test
+      - task: build
+
+  deps:
+    desc: Install code dependencies
+    cmds:
+      - npm install
+      - go mod download
+
+  dev:
+    desc: Build and serve the project with hot reloading
+    watch: true
+    sources:
+      - "**/*.go"
+      - "**/*.sql"
+      - "**/*.js"
+      - "**/*.css"
+      - "**/*.json"
+      - exclude: "./.git/**"
+      - exclude: "./node_modules/**"
+      - exclude: "./internal/database/dbgen/**"
+      - exclude: "./internal/view/static/build/**"
+      - exclude: "./temp/**"
+      - exclude: "./tmp/**"
+      - exclude: "./dist/**"
+      - exclude: "**/*.test.go"
+      - exclude: "**/*.generated.go"
+      - exclude: "**/*.sql.go"
+      - exclude: "**/*.gen.go"
+      - exclude: "**/*.gen.sql"
+      - exclude: "**/*.min.css"
+      - exclude: "**/*.min.js"
+    deps:
+      - build
+    cmds:
+      - ./dist/app
+
+  build:
+    desc: Build the project
+    deps:
+      - gen:db
+      - build:static
+    cmds:
+      - go build -o ./dist/app ./cmd/app/.
+      - go build -o ./dist/change-password ./cmd/changepw/.
+
+  setversion:
+    desc: Set the version from latest git tag in the relevant files
+    cmds:
+      - chmod +x ./scripts/set-version.sh
+      - ./scripts/set-version.sh {{.CLI_ARGS}}
+
+  serve:
+    desc: Serve the built project
+    cmd: ./dist/app
+
+  servem:
+    desc: Run migrations and then serve the built project
+    cmds:
+      - task goose -- up
+      - task serve
+
+  run:
+    desc: Build the project and then serve it
+    cmds:
+      - task build
+      - task serve
+
+  goose:
+    desc: Run goose commands Ex. task goose -- up
+    silent: true
+    cmd: >
+      goose
+      -dir ./internal/database/migrations
+      postgres "{{.PBW_POSTGRES_CONN_STRING}}"
+      {{.CLI_ARGS}}
+
+  gen:db:
+    desc: Generate sqlc files
+    silent: true
+    cmds:
+      - node ./scripts/sqlc-prebuild.ts
+      - sqlc generate
+    sources:
+      - ./internal/service/**/*.sql
+    generates:
+      - ./internal/database/queries.gen.sql
+      - ./internal/database/dbgen/*.go
+
+  reset:db:
+    desc: Reset the database
+    cmd: go run ./cmd/resetdb/.
+
+  build:static:
+    desc: Build the static files (css and js)
+    silent: true
+    cmds:
+      - >
+        npm run tailwindcss --
+        --minify
+        --config ./tailwind.config.ts
+        --input ./internal/view/static/css/style.css
+        --output ./internal/view/static/build/style.min.css
+      - node ./scripts/build-js.ts
+
+  tidy:
+    desc: Tidy the go.mod file
+    cmd: go mod tidy
+
+  fmt:
+    desc: Format the go and js files
+    cmds:
+      - go fmt ./...
+      - npm run prettier -- --write .
+
+  lint:
+    desc: Lint the go and js files
+    cmds:
+      - task gen:db
+      - golangci-lint run ./...
+      - npm run prettier -- --check .
+
+  test:
+    desc: Run the tests
+    cmds:
+      - task gen:db
+      - go test ./...
+
+  checkdeps:
+    desc: Check if all required dependencies are installed
+    silent: true
+    cmds:
+      - chmod +x ./scripts/check-deps.sh
+      - ./scripts/check-deps.sh
+
+  clean:
+    desc: Clean the temporary and distribution folders
+    cmds:
+      - rm -rf ./tmp
+      - rm -rf ./dist
+
+  fixperms:
+    desc: Fixes the permissions of the files in the project
+    cmds:
+      - mkdir -p /workspaces && chmod -R 777 /workspaces # For dev container
+      - mkdir -p /app && chmod -R 777 /app # For prod container
