@@ -12,6 +12,11 @@ API_ENV_FILE="${API_ENV_FILE:-/opt/mega/orch-api/.env}"
 DEPLOY_DOMAIN="${DEPLOY_DOMAIN:-noc.omniforge.com.br}"
 CERTBOT_EMAIL="${CERTBOT_EMAIL:-}"
 
+# Prevent accidental recursion when caller exports DEPLOY_SCRIPT as this file.
+if [[ "${DEPLOY_SCRIPT}" == "${BASH_SOURCE[0]}" ]]; then
+  DEPLOY_SCRIPT="${REPO_DIR}/scripts/deploy_remote.sh"
+fi
+
 cleanup() {
   rm -f "${TMP_API}" "${TMP_UI}" "${LOCK_FILE}"
 }

@@ -14,7 +14,8 @@ WEBHOOK_PORT = int(os.environ.get("WEBHOOK_PORT", "9001"))
 TARGET_REF = os.environ.get("TARGET_REF", "refs/heads/main")
 ALLOWED_REPO = os.environ.get("ALLOWED_REPO", "")
 DEPLOY_SCRIPT = os.environ.get(
-    "DEPLOY_SCRIPT", "/opt/mega/noc_orquestrador/scripts/deploy_from_checkout.sh"
+    "WEBHOOK_DEPLOY_SCRIPT",
+    os.environ.get("DEPLOY_SCRIPT", "/opt/mega/noc_orquestrador/scripts/deploy_from_checkout.sh"),
 )
 LOG_FILE = os.environ.get("WEBHOOK_LOG_FILE", "/var/log/noc-webhook.log")
 LOCK_FILE = Path(os.environ.get("WEBHOOK_LOCK_FILE", "/tmp/noc-deploy.lock"))
