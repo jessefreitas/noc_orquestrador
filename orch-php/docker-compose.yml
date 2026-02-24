@@ -1,0 +1,57 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: noc-orquestrador-php
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8080:80"
+    volumes:
+      - ./src:/var/www/html
+    environment:
+      APP_ENV: local
+      APP_KEY: local-dev-key-change-in-production
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_DATABASE: noc_orquestrador
+      DB_USERNAME: noc_user
+      DB_PASSWORD: noc_pass_local
+      HETZNER_API_BASE_URL: https://api.hetzner.cloud/v1
+      FX_RATES_URL: https://economia.awesomeapi.com.br/json/last/USD-BRL,EUR-BRL
+      OMNILOGS_LOKI_PUSH_URL: https://loki.omniforge.com.br/loki/api/v1/push
+      OMNILOGS_LOKI_USERNAME: omnilogs
+      OMNILOGS_LOKI_PASSWORD: ${OMNILOGS_LOKI_PASSWORD:-CHANGE_ME}
+      PLATFORM_OWNER_EMAIL: admin@local.test
+      LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-CHANGE_ME}
+      LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-CHANGE_ME}
+      LANGFUSE_BASE_URL: https://langfuse.omniforge.com.br
+      LLM_GLOBAL_PROVIDER: openai
+      LLM_GLOBAL_MODEL: gpt-4.1-mini
+      LLM_GLOBAL_BASE_URL: https://api.openai.com/v1
+      LLM_GLOBAL_API_KEY: ${LLM_GLOBAL_API_KEY:-CHANGE_ME}
+      LLM_FORCE_GLOBAL: "1"
+
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: noc-orquestrador-db
+    restart: unless-stopped
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_DB: noc_orquestrador
+      POSTGRES_USER: noc_user
+      POSTGRES_PASSWORD: noc_pass_local
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  db_data:

@@ -1,0 +1,208 @@
+# category|method|path|label|operation_id
+
+Servers|GET|/servers|List servers|servers.list
+Servers|POST|/servers|Create server|servers.create
+Servers|GET|/servers/{id}|Get server|servers.get
+Servers|PUT|/servers/{id}|Update server|servers.update
+Servers|DELETE|/servers/{id}|Delete server|servers.delete
+Servers|GET|/servers/{id}/metrics|Server metrics|servers.metrics
+
+Server Actions|GET|/servers/actions|List actions|server_actions.list_global
+Server Actions|GET|/servers/actions/{id}|Get action|server_actions.get_global
+Server Actions|GET|/servers/{id}/actions|List actions for server|server_actions.list
+Server Actions|GET|/servers/{id}/actions/{action_id}|Get action for server|server_actions.get
+Server Actions|POST|/servers/{id}/actions/add_to_placement_group|Add to placement group|server_actions.add_to_placement_group
+Server Actions|POST|/servers/{id}/actions/attach_iso|Attach ISO|server_actions.attach_iso
+Server Actions|POST|/servers/{id}/actions/attach_to_network|Attach to network|server_actions.attach_to_network
+Server Actions|POST|/servers/{id}/actions/change_alias_ips|Change alias IPs|server_actions.change_alias_ips
+Server Actions|POST|/servers/{id}/actions/change_dns_ptr|Change DNS PTR|server_actions.change_dns_ptr
+Server Actions|POST|/servers/{id}/actions/change_protection|Change protection|server_actions.change_protection
+Server Actions|POST|/servers/{id}/actions/change_type|Change type|server_actions.change_type
+Server Actions|POST|/servers/{id}/actions/create_image|Create image snapshot|server_actions.create_image
+Server Actions|POST|/servers/{id}/actions/detach_from_network|Detach from network|server_actions.detach_from_network
+Server Actions|POST|/servers/{id}/actions/detach_iso|Detach ISO|server_actions.detach_iso
+Server Actions|POST|/servers/{id}/actions/disable_backup|Disable backup|server_actions.disable_backup
+Server Actions|POST|/servers/{id}/actions/disable_rescue|Disable rescue|server_actions.disable_rescue
+Server Actions|POST|/servers/{id}/actions/enable_backup|Enable backup|server_actions.enable_backup
+Server Actions|POST|/servers/{id}/actions/enable_rescue|Enable rescue|server_actions.enable_rescue
+Server Actions|POST|/servers/{id}/actions/poweroff|Power off|server_actions.poweroff
+Server Actions|POST|/servers/{id}/actions/poweron|Power on|server_actions.poweron
+Server Actions|POST|/servers/{id}/actions/reboot|Reboot|server_actions.reboot
+Server Actions|POST|/servers/{id}/actions/rebuild|Rebuild|server_actions.rebuild
+Server Actions|POST|/servers/{id}/actions/remove_from_placement_group|Remove from placement group|server_actions.remove_from_placement_group
+Server Actions|POST|/servers/{id}/actions/request_console|Request console|server_actions.request_console
+Server Actions|POST|/servers/{id}/actions/reset|Reset power cycle|server_actions.reset
+Server Actions|POST|/servers/{id}/actions/reset_password|Reset root password|server_actions.reset_password
+Server Actions|POST|/servers/{id}/actions/shutdown|Shutdown|server_actions.shutdown
+
+Server Types|GET|/server_types|List server types|server_types.list
+Server Types|GET|/server_types/{id}|Get server type|server_types.get
+
+Images|GET|/images|List images|images.list
+Images|GET|/images/{id}|Get image|images.get
+Images|PUT|/images/{id}|Update image|images.update
+Images|DELETE|/images/{id}|Delete image|images.delete
+Image Actions|GET|/images/actions|List actions|image_actions.list_global
+Image Actions|GET|/images/actions/{id}|Get action|image_actions.get_global
+Image Actions|GET|/images/{id}/actions|List actions for image|image_actions.list
+Image Actions|GET|/images/{id}/actions/{action_id}|Get action for image|image_actions.get
+Image Actions|POST|/images/{id}/actions/change_protection|Change image protection|image_actions.change_protection
+
+ISOs|GET|/isos|List ISOs|isos.list
+ISOs|GET|/isos/{id}|Get ISO|isos.get
+
+Volumes|GET|/volumes|List volumes|volumes.list
+Volumes|POST|/volumes|Create volume|volumes.create
+Volumes|GET|/volumes/{id}|Get volume|volumes.get
+Volumes|PUT|/volumes/{id}|Update volume|volumes.update
+Volumes|DELETE|/volumes/{id}|Delete volume|volumes.delete
+Volume Actions|GET|/volumes/actions|List actions|volume_actions.list_global
+Volume Actions|GET|/volumes/actions/{id}|Get action|volume_actions.get_global
+Volume Actions|GET|/volumes/{id}/actions|List actions for volume|volume_actions.list
+Volume Actions|GET|/volumes/{id}/actions/{action_id}|Get action for volume|volume_actions.get
+Volume Actions|POST|/volumes/{id}/actions/attach|Attach volume|volume_actions.attach
+Volume Actions|POST|/volumes/{id}/actions/change_protection|Change volume protection|volume_actions.change_protection
+Volume Actions|POST|/volumes/{id}/actions/detach|Detach volume|volume_actions.detach
+Volume Actions|POST|/volumes/{id}/actions/resize|Resize volume|volume_actions.resize
+
+Floating IPs|GET|/floating_ips|List floating IPs|floating_ips.list
+Floating IPs|POST|/floating_ips|Create floating IP|floating_ips.create
+Floating IPs|GET|/floating_ips/{id}|Get floating IP|floating_ips.get
+Floating IPs|PUT|/floating_ips/{id}|Update floating IP|floating_ips.update
+Floating IPs|DELETE|/floating_ips/{id}|Delete floating IP|floating_ips.delete
+Floating IP Actions|GET|/floating_ips/actions|List actions|floating_ip_actions.list_global
+Floating IP Actions|GET|/floating_ips/actions/{id}|Get action|floating_ip_actions.get_global
+Floating IP Actions|GET|/floating_ips/{id}/actions|List actions for floating IP|floating_ip_actions.list
+Floating IP Actions|GET|/floating_ips/{id}/actions/{action_id}|Get action for floating IP|floating_ip_actions.get
+Floating IP Actions|POST|/floating_ips/{id}/actions/assign|Assign floating IP|floating_ip_actions.assign
+Floating IP Actions|POST|/floating_ips/{id}/actions/change_dns_ptr|Change floating IP DNS PTR|floating_ip_actions.change_dns_ptr
+Floating IP Actions|POST|/floating_ips/{id}/actions/change_protection|Change floating IP protection|floating_ip_actions.change_protection
+Floating IP Actions|POST|/floating_ips/{id}/actions/unassign|Unassign floating IP|floating_ip_actions.unassign
+
+Primary IPs|GET|/primary_ips|List primary IPs|primary_ips.list
+Primary IPs|POST|/primary_ips|Create primary IP|primary_ips.create
+Primary IPs|GET|/primary_ips/{id}|Get primary IP|primary_ips.get
+Primary IPs|PUT|/primary_ips/{id}|Update primary IP|primary_ips.update
+Primary IPs|DELETE|/primary_ips/{id}|Delete primary IP|primary_ips.delete
+Primary IP Actions|GET|/primary_ips/actions|List actions|primary_ip_actions.list_global
+Primary IP Actions|GET|/primary_ips/actions/{id}|Get action|primary_ip_actions.get_global
+Primary IP Actions|GET|/primary_ips/{id}/actions|List actions for primary IP|primary_ip_actions.list
+Primary IP Actions|GET|/primary_ips/{id}/actions/{action_id}|Get action for primary IP|primary_ip_actions.get
+Primary IP Actions|POST|/primary_ips/{id}/actions/assign|Assign primary IP|primary_ip_actions.assign
+Primary IP Actions|POST|/primary_ips/{id}/actions/change_dns_ptr|Change primary IP DNS PTR|primary_ip_actions.change_dns_ptr
+Primary IP Actions|POST|/primary_ips/{id}/actions/change_protection|Change primary IP protection|primary_ip_actions.change_protection
+Primary IP Actions|POST|/primary_ips/{id}/actions/unassign|Unassign primary IP|primary_ip_actions.unassign
+
+Placement Groups|GET|/placement_groups|List placement groups|placement_groups.list
+Placement Groups|POST|/placement_groups|Create placement group|placement_groups.create
+Placement Groups|GET|/placement_groups/{id}|Get placement group|placement_groups.get
+Placement Groups|PUT|/placement_groups/{id}|Update placement group|placement_groups.update
+Placement Groups|DELETE|/placement_groups/{id}|Delete placement group|placement_groups.delete
+
+Firewalls|GET|/firewalls|List firewalls|firewalls.list
+Firewalls|POST|/firewalls|Create firewall|firewalls.create
+Firewalls|GET|/firewalls/{id}|Get firewall|firewalls.get
+Firewalls|PUT|/firewalls/{id}|Update firewall|firewalls.update
+Firewalls|DELETE|/firewalls/{id}|Delete firewall|firewalls.delete
+Firewall Actions|GET|/firewalls/actions|List actions|firewall_actions.list_global
+Firewall Actions|GET|/firewalls/actions/{id}|Get action|firewall_actions.get_global
+Firewall Actions|GET|/firewalls/{id}/actions|List actions for firewall|firewall_actions.list
+Firewall Actions|GET|/firewalls/{id}/actions/{action_id}|Get action for firewall|firewall_actions.get
+Firewall Actions|POST|/firewalls/{id}/actions/apply_to_resources|Apply firewall to resources|firewall_actions.apply_to_resources
+Firewall Actions|POST|/firewalls/{id}/actions/remove_from_resources|Remove firewall from resources|firewall_actions.remove_from_resources
+Firewall Actions|POST|/firewalls/{id}/actions/set_rules|Set firewall rules|firewall_actions.set_rules
+
+Load Balancers|GET|/load_balancers|List load balancers|load_balancers.list
+Load Balancers|POST|/load_balancers|Create load balancer|load_balancers.create
+Load Balancers|GET|/load_balancers/{id}|Get load balancer|load_balancers.get
+Load Balancers|PUT|/load_balancers/{id}|Update load balancer|load_balancers.update
+Load Balancers|DELETE|/load_balancers/{id}|Delete load balancer|load_balancers.delete
+Load Balancers|GET|/load_balancers/{id}/metrics|Load balancer metrics|load_balancers.metrics
+Load Balancer Actions|GET|/load_balancers/actions|List actions|load_balancer_actions.list_global
+Load Balancer Actions|GET|/load_balancers/actions/{id}|Get action|load_balancer_actions.get_global
+Load Balancer Actions|GET|/load_balancers/{id}/actions|List actions for load balancer|load_balancer_actions.list
+Load Balancer Actions|GET|/load_balancers/{id}/actions/{action_id}|Get action for load balancer|load_balancer_actions.get
+Load Balancer Actions|POST|/load_balancers/{id}/actions/add_service|Add service|load_balancer_actions.add_service
+Load Balancer Actions|POST|/load_balancers/{id}/actions/add_target|Add target|load_balancer_actions.add_target
+Load Balancer Actions|POST|/load_balancers/{id}/actions/attach_to_network|Attach to network|load_balancer_actions.attach_to_network
+Load Balancer Actions|POST|/load_balancers/{id}/actions/change_algorithm|Change algorithm|load_balancer_actions.change_algorithm
+Load Balancer Actions|POST|/load_balancers/{id}/actions/change_dns_ptr|Change DNS PTR|load_balancer_actions.change_dns_ptr
+Load Balancer Actions|POST|/load_balancers/{id}/actions/change_protection|Change protection|load_balancer_actions.change_protection
+Load Balancer Actions|POST|/load_balancers/{id}/actions/change_type|Change type|load_balancer_actions.change_type
+Load Balancer Actions|POST|/load_balancers/{id}/actions/delete_service|Delete service|load_balancer_actions.delete_service
+Load Balancer Actions|POST|/load_balancers/{id}/actions/detach_from_network|Detach from network|load_balancer_actions.detach_from_network
+Load Balancer Actions|POST|/load_balancers/{id}/actions/disable_public_interface|Disable public interface|load_balancer_actions.disable_public_interface
+Load Balancer Actions|POST|/load_balancers/{id}/actions/enable_public_interface|Enable public interface|load_balancer_actions.enable_public_interface
+Load Balancer Actions|POST|/load_balancers/{id}/actions/remove_target|Remove target|load_balancer_actions.remove_target
+Load Balancer Actions|POST|/load_balancers/{id}/actions/update_service|Update service|load_balancer_actions.update_service
+
+Load Balancer Types|GET|/load_balancer_types|List load balancer types|load_balancer_types.list
+Load Balancer Types|GET|/load_balancer_types/{id}|Get load balancer type|load_balancer_types.get
+
+Networks|GET|/networks|List networks|networks.list
+Networks|POST|/networks|Create network|networks.create
+Networks|GET|/networks/{id}|Get network|networks.get
+Networks|PUT|/networks/{id}|Update network|networks.update
+Networks|DELETE|/networks/{id}|Delete network|networks.delete
+Network Actions|GET|/networks/actions|List actions|network_actions.list_global
+Network Actions|GET|/networks/actions/{id}|Get action|network_actions.get_global
+Network Actions|GET|/networks/{id}/actions|List actions for network|network_actions.list
+Network Actions|GET|/networks/{id}/actions/{action_id}|Get action for network|network_actions.get
+Network Actions|POST|/networks/{id}/actions/add_route|Add route|network_actions.add_route
+Network Actions|POST|/networks/{id}/actions/add_subnet|Add subnet|network_actions.add_subnet
+Network Actions|POST|/networks/{id}/actions/change_ip_range|Change IP range|network_actions.change_ip_range
+Network Actions|POST|/networks/{id}/actions/change_protection|Change network protection|network_actions.change_protection
+Network Actions|POST|/networks/{id}/actions/delete_route|Delete route|network_actions.delete_route
+Network Actions|POST|/networks/{id}/actions/delete_subnet|Delete subnet|network_actions.delete_subnet
+
+DNS Zones|GET|/zones|List zones|zones.list
+DNS Zones|POST|/zones|Create zone|zones.create
+DNS Zones|GET|/zones/{id_or_name}|Get zone|zones.get
+DNS Zones|PUT|/zones/{id_or_name}|Update zone|zones.update
+DNS Zones|DELETE|/zones/{id_or_name}|Delete zone|zones.delete
+DNS Zones|GET|/zones/{id_or_name}/zonefile|Export zonefile|zones.zonefile_export
+DNS Zone Actions|GET|/zones/actions|List actions|zone_actions.list_global
+DNS Zone Actions|GET|/zones/actions/{id}|Get action|zone_actions.get_global
+DNS Zone Actions|GET|/zones/{id_or_name}/actions|List actions for zone|zone_actions.list
+DNS Zone Actions|GET|/zones/{id_or_name}/actions/{action_id}|Get action for zone|zone_actions.get
+DNS Zone Actions|POST|/zones/{id_or_name}/actions/change_primary_ns|Change primary nameserver|zone_actions.change_primary_ns
+DNS Zone Actions|POST|/zones/{id_or_name}/actions/change_protection|Change zone protection|zone_actions.change_protection
+DNS Zone Actions|POST|/zones/{id_or_name}/actions/change_ttl|Change default TTL|zone_actions.change_ttl
+DNS Zone Actions|POST|/zones/{id_or_name}/actions/import_zonefile|Import zonefile|zone_actions.import_zonefile
+
+DNS RRsets|GET|/zones/{id_or_name}/rrsets|List RRsets|rrsets.list
+DNS RRsets|POST|/zones/{id_or_name}/rrsets|Create RRset|rrsets.create
+DNS RRsets|GET|/zones/{id_or_name}/rrsets/{record_name}/{record_type}|Get RRset|rrsets.get
+DNS RRsets|PUT|/zones/{id_or_name}/rrsets/{record_name}/{record_type}|Update RRset|rrsets.update
+DNS RRsets|DELETE|/zones/{id_or_name}/rrsets/{record_name}/{record_type}|Delete RRset|rrsets.delete
+DNS RRset Actions|GET|/zones/{id_or_name}/rrsets/actions|List actions|rrset_actions.list_global
+DNS RRset Actions|GET|/zones/{id_or_name}/rrsets/actions/{id}|Get action|rrset_actions.get_global
+DNS RRset Actions|GET|/zones/{id_or_name}/rrsets/{record_name}/{record_type}/actions|List actions for RRset|rrset_actions.list
+DNS RRset Actions|GET|/zones/{id_or_name}/rrsets/{record_name}/{record_type}/actions/{action_id}|Get action for RRset|rrset_actions.get
+DNS RRset Actions|POST|/zones/{id_or_name}/rrsets/{record_name}/{record_type}/actions/change_protection|Change RRset protection|rrset_actions.change_protection
+DNS RRset Actions|POST|/zones/{id_or_name}/rrsets/{record_name}/{record_type}/actions/toggle_dnssec|Toggle DNSSEC|rrset_actions.toggle_dnssec
+
+Certificates|GET|/certificates|List certificates|certificates.list
+Certificates|POST|/certificates|Create certificate|certificates.create
+Certificates|GET|/certificates/{id}|Get certificate|certificates.get
+Certificates|PUT|/certificates/{id}|Update certificate|certificates.update
+Certificates|DELETE|/certificates/{id}|Delete certificate|certificates.delete
+Certificate Actions|GET|/certificates/actions|List actions|certificate_actions.list_global
+Certificate Actions|GET|/certificates/actions/{id}|Get action|certificate_actions.get_global
+Certificate Actions|GET|/certificates/{id}/actions|List actions for certificate|certificate_actions.list
+Certificate Actions|GET|/certificates/{id}/actions/{action_id}|Get action for certificate|certificate_actions.get
+Certificate Actions|POST|/certificates/{id}/actions/retry|Retry certificate validation|certificate_actions.retry
+
+SSH Keys|GET|/ssh_keys|List SSH keys|ssh_keys.list
+SSH Keys|POST|/ssh_keys|Create SSH key|ssh_keys.create
+SSH Keys|GET|/ssh_keys/{id}|Get SSH key|ssh_keys.get
+SSH Keys|PUT|/ssh_keys/{id}|Update SSH key|ssh_keys.update
+SSH Keys|DELETE|/ssh_keys/{id}|Delete SSH key|ssh_keys.delete
+
+Locations|GET|/locations|List locations|locations.list
+Locations|GET|/locations/{id}|Get location|locations.get
+
+Datacenters|GET|/datacenters|List datacenters|datacenters.list
+Datacenters|GET|/datacenters/{id}|Get datacenter|datacenters.get
+
+Billing|GET|/pricing|Get pricing information|pricing.get
